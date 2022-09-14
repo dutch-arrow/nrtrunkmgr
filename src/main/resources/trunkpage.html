@@ -1,0 +1,1680 @@
+<!doctype html>
+<html lang="en">
+    <head>
+	    <!-- Required meta tags -->
+	    <meta charset="utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	    <meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!-- Do not cache this page -->
+		<meta http-equiv="cache-control" content="max-age=0">
+		<meta http-equiv="cache-control" content="no-cache">
+		<meta http-equiv="expires" content="-1">
+		<meta http-equiv="expires" content="Tue, 01 Jan 1980 11:00:00 GMT">
+		<meta http-equiv="pragma" content="no-cache">
+
+		<!-- Load required Bootstrap and BootstrapVue CSS -->
+		<link type="text/css" rel="stylesheet" href="https://unpkg.com/bootstrap/dist/css/bootstrap.min.css" />
+		<link type="text/css" rel="stylesheet" href="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.min.css" />
+
+		<!-- Load polyfills to support older browsers -->
+		<script src="https://polyfill.io/v3/polyfill.min.js?features=es2015%2CIntersectionObserver" crossorigin="anonymous"></script>
+
+		<!-- Load Vue followed by BootstrapVue -->
+	    <script src="https://unpkg.com/vue@2.6.14/dist/vue.js"></script>
+	    <script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.js"></script>
+
+		<!-- Load the following for BootstrapVueIcons support -->
+		<script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue-icons.min.js"></script>
+		<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+	    <title>AnyDB Review and Management</title>
+		<style>
+			.code3 {
+				font-family: "Monaco", "Courier New", monospace;
+				font-size:smaller;
+				height: 750px;
+				width: 100%;
+				white-space: nowrap;
+				overflow:scroll;
+			}
+			.code2 {
+				font-family: "Monaco", "Courier New", monospace;
+				font-size:smaller;
+				height: 600px;
+				width: 100%;
+				white-space: nowrap;
+				overflow:scroll;
+			}
+			.code1 {
+				font-family: "Monaco", "Courier New", monospace;
+				font-size:smaller;
+				height: 600px;
+				width: 100%;
+				overflow:scroll;
+			}
+			.col-code { width: 45%;	}
+			.del { background-color:orange; }
+			.add { background-color:lightgreen; }
+			.navbar-menu-title {
+				margin: auto;
+	            color: white !important;
+	            font-size: 24px;
+			}
+			h4 {
+				color:darkblue;
+				font-size: 20px;
+			}
+			hr {
+			  margin-top: 5px;
+			  margin-bottom: 0;
+			  height: 2px !important;
+			  opacity: 1;
+			}
+			#selenv {
+				font-size: 18px;
+				padding: 5px;
+				width:100%;
+			}
+			#currevno, #prvrevno {
+				font-size: 18px;
+				padding: 5px 10px 5px 10px;
+			}
+			#collapse_button {
+				font-size: 24px;
+				font-weight:bolder;
+				padding: 0px 10px 0px 10px;
+			}
+			.nav-tabs {
+				font-size: 20px;
+			}
+			.card-header {
+				font-size: 24px;
+			}
+			.card-body {
+				padding: 5px;
+			}
+			.form-control-plaintext {
+				font-size: 18px;
+				padding: 0px 10px 0px 10px;
+			}
+			.result-card-title .card-body h4.card-title {
+				text-align:center;
+				font-size: 28px;
+			}
+		</style>
+    </head>
+    <body>
+    <!-- Our application root element -->
+    <div id="app">
+        <b-navbar type="dark" variant="primary">
+			<b-button id="collapse_button" variant="primary" @click="collapse_col" v-b-tooltip.hover.right :title="collapse_col_tooltip">{{collapse_col_text}}</b-button>
+            <div class="navbar-menu-title">AnyDB Live Maintenance</div>
+        </b-navbar>
+		<b-modal id="login" ref="login" title="Enter your SVN credentials" @ok="handleLoginOk" hide-header-close>
+			<form ref="form" @submit.stop.prevent="handleLoginSubmit">
+				<b-form-group label="Username" label-for="name-input" invalid-feedback="Username is required" :state="nameState">
+          			<b-form-input id="name-input" v-model="uname" :state="nameState" required></b-form-input>
+				</b-form-group>
+				<b-form-group label="Password" label-for="pwd-input" invalid-feedback="Password is required" :state="pwdState">
+          			<b-form-input id="pwd-input" v-model="pwd" type="password" :state="pwdState" required></b-form-input>
+				</b-form-group>
+			</form>
+		</b-modal>
+		<b-overlay :show="initializing" variant="light" opacity="0.6" rounded="sm">
+		<b-container fluid >
+			<b-row>
+				<b-col cols="3" v-show="!collapse">
+					<b-card :title="selBranch" v-show="hasChanges == 0">
+						<b-form @submit="onSubmitBranch">
+							<b-container fluid style="padding-left: 0;">
+						        <b-overlay :show="loading3" variant="light" opacity="0.6" rounded="sm">
+								<b-row>
+									<b-col cols="8">
+										<b-form-select id="selenv" v-model="envSelected" :options="envOptions" class="mr-auto"></b-form-select>
+									</b-col>
+									<b-col class="mt-auto">
+										<b-button style="width:100%;" type="submit" variant="primary">Select</b-button>
+									</b-col>
+								</b-row>
+								<b-row v-show="retrieveResult3 !== ''">
+									<b-col class="mt-3">
+										<b-alert variant="success" show v-show="!loading3">{{ retrieveResult3 }}</b-alert>
+									</b-col>
+								</b-row>
+							</b-container>
+						</b-form>
+					</b-card>
+					<div class="accordion" role="tablist" v-show="show_nr && hasChanges == 0">
+						<b-card no-body>
+							<b-card-header header-tag="header" class="p-1" role="tab">
+								<b-button style="width:100%;" v-b-toggle.collapse-1 variant="outline-primary" fill>Compare BRANCH and LIVE Flows</b-button>
+							</b-card-header>
+							<b-collapse id="collapse-1" accordion="my-accordion">
+								<b-card-body>
+									<b-form @submit="onSubmitDevLiveFlows">
+										<b-container fluid style="padding-left: 0;">
+									        <b-overlay :show="loading1" variant="light" opacity="0.6" rounded="sm">
+											<b-row>
+												<b-col cols="4">
+												    <label class="sr-only" for="currevno">Current Dev rev</label>
+													<b-form-input v-model="devrevno" plaintext readonly class="border"></b-form-input>
+												</b-col>
+												<b-col cols="4">
+												    <label class="sr-only" for="prvrevno">Current Live rev</label>
+													<b-form-input v-model="liverevno" plaintext readonly class="border"></b-form-input>
+												</b-col>
+													<b-col class="mt-auto">
+													<b-button style="width:100%;" type="submit" variant="primary">Retrieve</b-button>
+												</b-col>
+											</b-row>
+											<b-row v-show="retrieveResult1 !== ''">
+												<b-col class="mt-3">
+													<b-alert variant="success" show v-show="!loading1">{{ retrieveResult1 }}</b-alert>
+												</b-col>
+											</b-row>
+										</b-container>
+									</b-form>
+								</b-card-body>
+							</b-collapse>
+						</b-card>
+						<b-card no-body v-show="!noUI">
+							<b-card-header header-tag="header" class="p-1" role="tab">
+								<b-button style="width:100%;" v-b-toggle.collapse-2 variant="outline-primary" >Compare BRANCH and LIVE UI HTML</b-button>
+							</b-card-header>
+							<b-collapse id="collapse-2" accordion="my-accordion">
+								<b-card-body>
+									<b-form @submit="onSubmitDevLiveUiHtml">
+										<b-container fluid style="padding-left: 0;">
+									        <b-overlay :show="loading5" variant="light" opacity="0.6" rounded="sm">
+											<b-row>
+												<b-col cols="4">
+												    <label class="sr-only" for="devhuirevno">Current Dev rev</label>
+													<b-form-input v-model="devhuirevno" plaintext readonly class="border"></b-form-input>
+												</b-col>
+												<b-col cols="4">
+												    <label class="sr-only" for="livehuirevno">Current Live rev</label>
+													<b-form-input v-model="livehuirevno" plaintext readonly class="border"></b-form-input>
+												</b-col>
+												<b-col class="mt-auto">
+													<b-button style="width:100%;" type="submit" variant="primary">Retrieve</b-button>
+												</b-col>
+											</b-row>
+											<b-row v-show="retrieveResult5 !== ''">
+												<b-col class="mt-3">
+													<b-alert variant="success" show v-show="!loading5">{{ retrieveResult5 }}</b-alert>
+												</b-col>
+											</b-row>
+										</b-container>
+									</b-form>
+								</b-card-body>
+							</b-collapse>
+						</b-card>
+						<b-card no-body v-show="!noUI">
+							<b-card-header header-tag="header" class="p-1" role="tab">
+								<b-button style="width:100%;" v-b-toggle.collapse-9 variant="outline-primary" >Compare BRANCH and LIVE UI Javascript</b-button>
+							</b-card-header>
+							<b-collapse id="collapse-9" accordion="my-accordion">
+								<b-card-body>
+									<b-form @submit="onSubmitDevLiveUiJs">
+										<b-container fluid style="padding-left: 0;">
+									        <b-overlay :show="loading12" variant="light" opacity="0.6" rounded="sm">
+											<b-row>
+												<b-col cols="4">
+												    <label class="sr-only" for="devjuirevno">Current Dev rev</label>
+													<b-form-input v-model="devjuirevno" plaintext readonly class="border"></b-form-input>
+												</b-col>
+												<b-col cols="4">
+												    <label class="sr-only" for="livejuirevno">Current Live rev</label>
+													<b-form-input v-model="livejuirevno" plaintext readonly class="border"></b-form-input>
+												</b-col>
+												<b-col class="mt-auto">
+													<b-button style="width:100%;" type="submit" variant="primary">Retrieve</b-button>
+												</b-col>
+											</b-row>
+											<b-row v-show="retrieveResult12 !== ''">
+												<b-col class="mt-3">
+													<b-alert variant="success" show v-show="!loading12">{{ retrieveResult12 }}</b-alert>
+												</b-col>
+											</b-row>
+										</b-container>
+									</b-form>
+								</b-card-body>
+							</b-collapse>
+						</b-card>
+						<b-card no-body v-show="!noUI">
+							<b-card-header header-tag="header" class="p-1" role="tab">
+								<b-button style="width:100%;" v-b-toggle.collapse-10 variant="outline-primary" >Compare BRANCH and LIVE UI CSS</b-button>
+							</b-card-header>
+							<b-collapse id="collapse-10" accordion="my-accordion">
+								<b-card-body>
+									<b-form @submit="onSubmitDevLiveUiCss">
+										<b-container fluid style="padding-left: 0;">
+									        <b-overlay :show="loading13" variant="light" opacity="0.6" rounded="sm">
+											<b-row>
+												<b-col cols="4">
+												    <label class="sr-only" for="devcuirevno">Current Dev rev</label>
+													<b-form-input v-model="devcuirevno" plaintext readonly class="border"></b-form-input>
+												</b-col>
+												<b-col cols="4">
+												    <label class="sr-only" for="livecuirevno">Current Live rev</label>
+													<b-form-input v-model="livecuirevno" plaintext readonly class="border"></b-form-input>
+												</b-col>
+												<b-col class="mt-auto">
+													<b-button style="width:100%;" type="submit" variant="primary">Retrieve</b-button>
+												</b-col>
+											</b-row>
+											<b-row v-show="retrieveResult13 !== ''">
+												<b-col class="mt-3">
+													<b-alert variant="success" show v-show="!loading13">{{ retrieveResult13 }}</b-alert>
+												</b-col>
+											</b-row>
+										</b-container>
+									</b-form>
+								</b-card-body>
+							</b-collapse>
+						</b-card>
+						<b-card no-body>
+							<b-card-header header-tag="header" class="p-1" role="tab">
+								<b-button style="width:100%;" v-b-toggle.collapse-8 variant="outline-primary" v-on:click="setCommitMessage">Merge and Commit changes</b-button>
+							</b-card-header>
+							<b-collapse id="collapse-8" accordion="my-accordion">
+								<b-card-body>
+									<b-form @submit="onMergeAndCommit">
+										<b-container fluid style="padding-left: 0;">
+									        <b-overlay :show="merging" variant="light" opacity="0.6" rounded="sm">
+											<b-row>
+												<b-col cols="8">
+													<b-form-textarea v-model="commitMsg" placeholder="Enter commit message" rows="1" max-rows="3"></b-form-textarea>
+												</b-col>
+												<b-col>
+													<b-button style="width:100%;" type="submit" variant="primary">Merge &<br>Commit</b-button>
+												</b-col>
+											</b-row>
+											<b-row v-show="commitResult !== ''">
+												<b-col class="mt-2">
+													<b-alert :variant="alertType" show v-show="!merging">{{ commitResult }}</b-alert>
+												</b-col>
+											</b-row>
+										</b-container>
+									</b-form>
+								</b-card-body>
+							</b-collapse>
+						</b-card>
+						<b-card no-body>
+							<b-card-header header-tag="header" class="p-1" role="tab">
+								<b-button style="width:100%;" v-b-toggle.collapse-3 variant="outline-primary">Compare LIVE Flows</b-button>
+							</b-card-header>
+							<b-collapse id="collapse-3" accordion="my-accordion">
+								<b-card-body>
+									<b-form @submit="onSubmitLiveFlows">
+										<b-container fluid style="padding-left: 0;">
+									        <b-overlay :show="loading2" variant="light" opacity="0.6" rounded="sm">
+											<b-row>
+												<b-col cols="4">
+												    <label class="sr-only" for="currevno">Current rev #</label>
+													<b-form-select id="currevno" v-model="currevno" :options="revOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col cols="4">
+												    <label class="sr-only" for="prvrevno">Previous rev #</label>
+													<b-form-select id="prvrevno" v-model="prvrevno" :options="revOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col class="mt-auto">
+													<b-button style="width:100%;" type="submit" variant="primary">Retrieve</b-button>
+												</b-col>
+											</b-row>
+											<b-row v-show="retrieveResult2 !== ''">
+												<b-col class="mt-3">
+													<b-alert variant="success" show v-show="!loading2">{{ retrieveResult2 }}</b-alert>
+												</b-col>
+											</b-row>
+										</b-container>
+									</b-form>
+								</b-card-body>
+							</b-collapse>
+						</b-card>
+						<b-card no-body v-show="!noUI">
+							<b-card-header header-tag="header" class="p-1" role="tab">
+								<b-button style="width:100%;" v-b-toggle.collapse-4 variant="outline-primary">Compare LIVE UI HTML</b-button>
+							</b-card-header>
+							<b-collapse id="collapse-4" accordion="my-accordion">
+								<b-card-body>
+									<b-form @submit="onSubmitLiveUiHtml">
+										<b-container fluid style="padding-left: 0;">
+									        <b-overlay :show="loading4" variant="light" opacity="0.6" rounded="sm">
+											<b-row>
+												<b-col cols="4">
+												    <label class="sr-only" for="curhuirevno">Current rev #</label>
+													<b-form-select id="currevno" v-model="curhuirevno" :options="revhuiOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col cols="4">
+												    <label class="sr-only" for="prvhuirevno">Previous rev #</label>
+													<b-form-select id="prvrevno" v-model="prvhuirevno" :options="revhuiOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col class="mt-auto">
+													<b-button style="width:100%;" type="submit" variant="primary">Retrieve</b-button>
+												</b-col>
+											</b-row>
+											<b-row v-show="retrieveResult4 !== ''">
+												<b-col class="mt-3">
+													<b-alert variant="success" show v-show="!loading4">{{ retrieveResult4 }}</b-alert>
+												</b-col>
+											</b-row>
+										</b-container>
+									</b-form>
+								</b-card-body>
+							</b-collapse>
+						</b-card>
+						<b-card no-body v-show="!noUI">
+							<b-card-header header-tag="header" class="p-1" role="tab">
+								<b-button style="width:100%;" v-b-toggle.collapse-11 variant="outline-primary">Compare LIVE UI Javascript</b-button>
+							</b-card-header>
+							<b-collapse id="collapse-11" accordion="my-accordion">
+								<b-card-body>
+									<b-form @submit="onSubmitLiveUiJs">
+										<b-container fluid style="padding-left: 0;">
+									        <b-overlay :show="loading10" variant="light" opacity="0.6" rounded="sm">
+											<b-row>
+												<b-col cols="4">
+												    <label class="sr-only" for="curjuirevno">Current rev #</label>
+													<b-form-select id="currevno" v-model="curjuirevno" :options="revjuiOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col cols="4">
+												    <label class="sr-only" for="prvjuirevno">Previous rev #</label>
+													<b-form-select id="prvrevno" v-model="prvjuirevno" :options="revjuiOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col class="mt-auto">
+													<b-button style="width:100%;" type="submit" variant="primary">Retrieve</b-button>
+												</b-col>
+											</b-row>
+											<b-row v-show="retrieveResult10 !== ''">
+												<b-col class="mt-3">
+													<b-alert variant="success" show v-show="!loading10">{{ retrieveResult10 }}</b-alert>
+												</b-col>
+											</b-row>
+										</b-container>
+									</b-form>
+								</b-card-body>
+							</b-collapse>
+						</b-card>
+						<b-card no-body v-show="!noUI">
+							<b-card-header header-tag="header" class="p-1" role="tab">
+								<b-button style="width:100%;" v-b-toggle.collapse-7 variant="outline-primary">Compare LIVE UI CSS</b-button>
+							</b-card-header>
+							<b-collapse id="collapse-7" accordion="my-accordion">
+								<b-card-body>
+									<b-form @submit="onSubmitLiveUiCss">
+										<b-container fluid style="padding-left: 0;">
+									        <b-overlay :show="loading11" variant="light" opacity="0.6" rounded="sm">
+											<b-row>
+												<b-col cols="4">
+												    <label class="sr-only" for="curcuirevno">Current rev #</label>
+													<b-form-select id="currevno" v-model="curcuirevno" :options="revcuiOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col cols="4">
+												    <label class="sr-only" for="prvcuirevno">Previous rev #</label>
+													<b-form-select id="prvrevno" v-model="prvcuirevno" :options="revcuiOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col class="mt-auto">
+													<b-button style="width:100%;" type="submit" variant="primary">Retrieve</b-button>
+												</b-col>
+											</b-row>
+											<b-row v-show="retrieveResult11 !== ''">
+												<b-col class="mt-3">
+													<b-alert variant="success" show v-show="!loading11">{{ retrieveResult11 }}</b-alert>
+												</b-col>
+											</b-row>
+										</b-container>
+									</b-form>
+								</b-card-body>
+							</b-collapse>
+						</b-card>
+					</div>
+					<b-alert variant="warning" show v-show="!initializing && hasChanges != 0">There are uncommitted modifications.<br/>Please commit them first.</b-alert>
+					<b-card title="Show Changes" v-show="!initializing && hasChanges">
+						<b-overlay :show="loading6" variant="light" opacity="0.6" rounded="sm">
+						<b-button class="pl-5" variant="primary" @click="diffFlows" v-show="hasChanges == 1 || hasChanges == 3">Flows</b-button>
+						<b-button class="pl-5" variant="primary" @click="diffUI" v-show="hasChanges == 2 || hasChanges == 3">UI</b-button>
+						<div v-show="!loading6">
+							{{ retrieveResult6 }}
+						</div>
+					</b-card>
+					<b-card title="Commit LIVE changes" v-show="!initializing && hasChanges != 0">
+						<b-form @submit="onCommit">
+							<b-container fluid style="padding-left: 0;">
+						        <b-overlay :show="committing" variant="light" opacity="0.6" rounded="sm">
+								<b-row>
+									<b-col cols="8">
+										<b-form-textarea v-model="commitMsg" placeholder="Enter commit message" rows="1" max-rows="3"></b-form-textarea>
+									</b-col>
+									<b-col>
+										<b-button style="width:100%;" type="submit" variant="primary">Commit</b-button>
+									</b-col>
+								</b-row>
+								<b-row v-show="commitResult !== ''">
+									<b-col class="mt-2">
+										<b-alert variant="success" show v-show="!committing">{{ commitResult }}</b-alert>
+									</b-col>
+								</b-row>
+							</b-container>
+						</b-form>
+					</b-card>
+					<div class="accordion" role="tablist" v-show="show_sql">
+						<b-card no-body>
+							<b-card-header header-tag="header" class="p-1" role="tab">
+								<b-button style="width:100%;" v-b-toggle.collapse-5 variant="outline-primary" fill>Compare Table scripts</b-button>
+							</b-card-header>
+							<b-collapse id="collapse-5" accordion="my-accordion">
+								<b-card-body>
+									<b-form @submit="onSubmitTableSql">
+										<b-container fluid style="padding-left: 0;">
+									        <b-overlay :show="loading7" variant="light" opacity="0.6" rounded="sm">
+											<b-row>
+												<b-col cols="4">
+												    <label class="sr-only" for="currevno">Current rev #</label>
+													<b-form-select id="currevno" v-model="curtsqlrevno" :options="revtsqlOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col cols="4">
+												    <label class="sr-only" for="prvrevno">Previous rev #</label>
+													<b-form-select id="prvrevno" v-model="prvtsqlrevno" :options="revtsqlOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col class="mt-auto">
+													<b-button style="width:100%;" type="submit" variant="primary">Retrieve</b-button>
+												</b-col>
+											</b-row>
+											<b-row v-show="retrieveResult7 !== ''">
+												<b-col class="mt-3">
+													<b-alert variant="success" show v-show="!loading7">{{ retrieveResult7 }}</b-alert>
+												</b-col>
+											</b-row>
+										</b-container>
+									</b-form>
+								</b-card-body>
+							</b-collapse>
+						</b-card>
+						<b-card no-body>
+							<b-card-header header-tag="header" class="p-1" role="tab">
+								<b-button style="width:100%;" v-b-toggle.collapse-6 variant="outline-primary" fill>Compare View scripts</b-button>
+							</b-card-header>
+							<b-collapse id="collapse-6" accordion="my-accordion">
+								<b-card-body>
+									<b-form @submit="onSubmitViewSql">
+										<b-container fluid style="padding-left: 0;">
+									        <b-overlay :show="loading8" variant="light" opacity="0.6" rounded="sm">
+											<b-row>
+												<b-col cols="4">
+												    <label class="sr-only" for="currevno">Current rev #</label>
+													<b-form-select id="currevno" v-model="curvsqlrevno" :options="revvsqlOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col cols="4">
+												    <label class="sr-only" for="prvrevno">Previous rev #</label>
+													<b-form-select id="prvrevno" v-model="prvvsqlrevno" :options="revvsqlOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col class="mt-auto">
+													<b-button style="width:100%;" type="submit" variant="primary">Retrieve</b-button>
+												</b-col>
+											</b-row>
+											<b-row v-show="retrieveResult8 !== ''">
+												<b-col class="mt-3">
+													<b-alert variant="success" show v-show="!loading8">{{ retrieveResult8 }}</b-alert>
+												</b-col>
+											</b-row>
+										</b-container>
+									</b-form>
+								</b-card-body>
+							</b-collapse>
+						</b-card>
+						<b-card no-body>
+							<b-card-header header-tag="header" class="p-1" role="tab">
+								<b-button style="width:100%;" v-b-toggle.collapse-7 variant="outline-primary" fill>Compare Procedure scripts</b-button>
+							</b-card-header>
+							<b-collapse id="collapse-7" accordion="my-accordion">
+								<b-card-body>
+									<b-form @submit="onSubmitProcSql">
+										<b-container fluid style="padding-left: 0;">
+									        <b-overlay :show="loading9" variant="light" opacity="0.6" rounded="sm">
+											<b-row>
+												<b-col cols="4">
+												    <label class="sr-only" for="currevno">Current rev #</label>
+													<b-form-select id="currevno" v-model="curpsqlrevno" :options="revpsqlOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col cols="4">
+												    <label class="sr-only" for="prvrevno">Previous rev #</label>
+													<b-form-select id="prvrevno" v-model="prvpsqlrevno" :options="revpsqlOptions" style="width:100%"></b-form-select>
+												</b-col>
+												<b-col class="mt-auto">
+													<b-button style="width:100%;" type="submit" variant="primary">Retrieve</b-button>
+												</b-col>
+											</b-row>
+											<b-row v-show="retrieveResult9 !== ''">
+												<b-col class="mt-3">
+													<b-alert variant="success" show v-show="!loading9">{{ retrieveResult9 }}</b-alert>
+												</b-col>
+											</b-row>
+										</b-container>
+									</b-form>
+								</b-card-body>
+							</b-collapse>
+						</b-card>
+					</div>
+				</b-col>
+				<b-col :cols="mainWidth">
+					<b-card notitle v-show="(show_diff || show_ui) && show_nr">
+						<div v-show="show_diff">
+							<b-tabs card fill>
+								<b-tab title="Nodes added" active>
+									<b-table small sticky-header="700px" :items="addedNodes" :fields="nodeFields">
+										<template #table-colgroup="data">
+										    <col style="width:25%">
+										    <col>
+										    <col style="width:10%">
+										    <col style="width:10%">
+										</template>
+										<template #cell(show_details)="row">
+								      		<b-button size="sm" @click="row.toggleDetails" class="mr-2" v-if="(row.item.curHtml.length > 0)">
+								        		{{ row.detailsShowing ? 'Hide' : 'Show'}} Code
+											</b-button>
+										</template>
+										<template #row-details="row">
+									        <b-card>
+									          <b-row class="mb-2">
+									            <b-col>
+													<pre class="code1" v-html="row.item.curHtml"></pre>
+												</b-col>
+									          </b-row>
+									        </b-card>
+										</template>
+									</b-table>
+								</b-tab>
+								<b-tab title="Nodes removed">
+									<b-table small sticky-header="700px" :items="removedNodes" :fields="nodeFields">
+										<template #table-colgroup="data">
+										    <col style="width:25%">
+										    <col>
+										    <col style="width:10%">
+										    <col style="width:10%">
+										</template>
+										<template #cell(show_details)="row">
+											<b-button size="sm" @click="row.toggleDetails" class="mr-2" v-if="(row.item.curHtml.length > 0)">
+												{{ row.detailsShowing ? 'Hide' : 'Show'}} Code
+											</b-button>
+										</template>
+										<template #row-details="row">
+									        <b-card>
+									          <b-row class="mb-2">
+									            <b-col>
+													<pre class="code1" v-html="row.item.curHtml"></pre>
+												</b-col>
+									          </b-row>
+									        </b-card>
+										</template>
+									</b-table>
+								</b-tab>
+								<b-tab title="Nodes changed">
+									<b-table small sticky-header="700px" :items="changedNodes" :fields="nodeFields">
+										<template #table-colgroup="data">
+											<col style="width:25%">
+											<col>
+											<col style="width:10%">
+										    <col style="width:10%">
+										</template>
+										<template #cell(show_details)="row">
+											<b-button size="sm" @click="row.toggleDetails" v-on:click="sync" class="mr-2"
+												v-if="(row.item.curHtml.length > 0 || row.item.prvHtml.length > 0)">
+												{{ row.detailsShowing ? 'Hide' : 'Show'}} Code
+											</b-button>
+										</template>
+										<template #row-details="row">
+											<b-card>
+												<b-row>
+													<b-col class="col-code">
+														<label style="font-weight: bolder;">{{diffHead1}}</label>
+														<hr>
+														<div name="syncscroll1" class="syncscroll code2" v-html="row.item.curHtml">
+														</div>
+													</b-col>
+													<b-col class="col-code">
+														<label style="font-weight: bolder;">{{diffHead2}}</label>
+														<hr>
+														<div name="syncscroll2" class="syncscroll code2" v-html="row.item.prvHtml"></div>
+													</b-col>
+												</b-row>
+											</b-card>
+										</template>
+									</b-table>
+								</b-tab>
+							</b-tabs>
+						</div>
+						<div v-show="show_ui">
+							<b-card :title="uitype" v-show="show_ui_result" class="result-card-title">
+								<b-card>
+									<b-container fluid style="padding-left:0;padding-right:0;">
+								        <b-row>
+								            <b-col class="col-code">
+                                                <label style="font-weight: bolder;">{{diffHead1}}</label><hr>
+												<div name="syncscroll9" class="syncscrollui code3" v-html="ui[0]"></div>
+											</b-col>
+											<b-col class="col-code">
+                                                <label style="font-weight: bolder;">{{diffHead2}}</label><hr>
+												<div name="syncscroll10" class="syncscrollui code3" v-html="ui[1]"></div>
+											</b-col>
+								        </b-row>
+									</b-container>
+								</b-card>
+							</b-card>
+						</div>
+					</b-card>
+					<b-card :title="sqltype" v-show="show_sql_result" class="result-card-title">
+						<b-card>
+							<b-container fluid style="padding-left:0;padding-right:0;">
+						        <b-row>
+						            <b-col class="col-code">
+                                        <label style="font-weight: bolder;">Current</label><hr>
+										<div name="syncscroll11" class="syncscrollsql code3" v-html="sqlresult[0]"></div>
+									</b-col>
+									<b-col class="col-code">
+                                        <label style="font-weight: bolder;">Prevous</label><hr>
+										<div name="syncscroll12" class="syncscrollsql code3" v-html="sqlresult[1]"></div>
+									</b-col>
+						        </b-row>
+							</b-container>
+						</b-card>
+					</b-card>
+				</b-col>
+			</b-row>
+		</b-container>
+	</div>
+    </body>
+	<script>
+		window.app = new Vue({
+			el: '#app',
+			data: function() {
+				return {
+					uname: "",
+					nameState: null,
+					pwd: "",
+					pwdState: null,
+					initializing: true,
+					loading1: false,
+					loading2: false,
+					loading3: false,
+					loading4: false,
+					loading5: false,
+					loading6: false,
+					loading7: false,
+					loading8: false,
+					loading9: false,
+					loading10: false,
+					loading11: false,
+					loading12: false,
+					loading13: false,
+					committing: false,
+					merging: false,
+					hasChanges: true,
+					devrevno: "",
+					liverevno: "",
+					devhuirevno: "",
+					livehuirevno: "",
+					devjuirevno: "",
+					livejuirevno: "",
+					devcuirevno: "",
+					livecuirevno: "",
+					currevno: "",
+					prvrevno: "",
+					curhuirevno: "",
+					prvhuirevno: "",
+					curjuirevno: "",
+					prvjuirevno: "",
+					curcuirevno: "",
+					prvcuirevno: "",
+					curtsqlrevno: "",
+					prvtsqlrevno: "",
+					curvsqlrevno: "",
+					prvvsqlrevno: "",
+					curpsqlrevno: "",
+					prvpsqlrevno: "",
+					retrieveResult1: "",
+					retrieveResult2: "",
+					retrieveResult3: "",
+					retrieveResult4: "",
+					retrieveResult5: "",
+					retrieveResult6: "",
+					retrieveResult7: "",
+					retrieveResult8: "",
+					retrieveResult9: "",
+					retrieveResult10: "",
+					retrieveResult11: "",
+					retrieveResult12: "",
+					retrieveResult13: "",
+					commitResult: "",
+					mergeResult: "",
+					revOptions: [],
+					revhuiOptions: [],
+					revjuiOptions: [],
+					revcuiOptions: [],
+					revtsqlOptions: [],
+					revvsqlOptions: [],
+					revpsqlOptions: [],
+					envOptions: [
+					],
+					nodeFields: [
+						{key: "tabName", label: "Tab"},
+						{key: "nodeName", label: "Node"},
+						{key: "nodeContent.type", label: "Type"},
+						{key: "whatChanged", label: "what changed?"},
+						{key: "show_details", label: "Code"}
+					],
+					addedNodes: [],
+					changedNodes: [],
+					removedNodes: [],
+					uitype: "",
+					ui: ["",""],
+					noUI: false,
+					sqltype: "",
+					sqlresult: ["",""],
+				    names: {},
+					commitMsg: "",
+					alertType: "success",
+					envSelected: "",
+					err400: false,
+					show_diff: false,
+					show_ui: false,
+					show_ui_result: false,
+					show_nr: false,
+					show_sql: false,
+					show_sql_result: false,
+					collapse: true,
+					collapse_col_state: true,
+					collapse_col_text: "<",
+					collapse_col_tooltip: "Close left column",
+					mainWidth: "12",
+					diffHead1: "Branch",
+					diffHead2: "Live",
+					selBranch: "Select branch",
+					curLiveRev: 0
+				};
+			},
+			computed: {
+			},
+			methods: {
+				collapse_col() {
+					this.collapse = !this.collapse;
+					this.mainWidth = this.collapse ? "12" : "9";
+					this.collapse_col_text = this.collapse ? ">" : "<";
+					this.collapse_col_tooltip = this.collapse ? "Open left column" : "Close left column";
+				},
+				setCommitMessage() {
+					this.commitMsg = "Merged branch " + this.envSelected;
+				},
+				diffFlows() {
+					event.preventDefault();
+					this.show_ui = false;
+					this.show_diff = true;
+					this.show_nr = true;
+					this.retrieveResult6 = "";
+					this.loading6 = true;
+					axios.post("/changedflows")
+					.then(response => {
+						this.retrieveResult6 = "";
+					    var f = response.data;
+						if (String(f).startsWith("svn")) {
+							this.retrieveResult6 = f;
+						} else {
+							this.addedNodes = f.added;
+							this.changedNodes = f.changed;
+							this.removedNodes = f.removed;
+						}
+						this.loading6 = false;
+					})
+					.catch(error => {
+						if (error.response.status === 400) {
+							this.retrieveResult6 = "Please push button again.";
+						} else {
+					    	console.log(error.message);
+						}
+						this.loading6 = false;
+					});
+				},
+				diffUI() {
+					event.preventDefault();
+					this.retrieveResult6 = "";
+					this.loading6 = true;
+					this.show_ui = true;
+					this.show_diff = false;
+					this.show_nr = true;
+					axios.post("/changeduis")
+					.then(response => {
+						this.retrieveResult6 = "";
+					    var f = response.data;
+						this.html = f.html;
+						this.js = f.js;
+						this.css = f.css;
+						this.resetui({target: {innerText: "HTML"}})
+						this.loading6 = false;
+					})
+					.catch(error => {
+						if (error.response.status === 400) {
+							this.retrieveResult6 = "Please push button again.";
+						} else {
+					    	console.log(error.message);
+						}
+						this.loading6 = false;
+					});
+				},
+				onSubmitBranch(event) {
+					event.preventDefault();
+					this.loading3 = true;
+					this.retrieveResult3 = "";
+					if (this.envSelected === "sql") {
+						this.show_diff = false;
+						this.show_ui = false;
+						this.show_ui_result = false;
+						this.show_nr = false;
+						this.show_sql_result = false;
+						this.loading3 = true;
+						axios.post('/sqlrevisions')
+						.then(response => {
+							var f = response.data;
+							if (String(f).startsWith("svn")) {
+								console.log(f);
+								this.retrieveResult3 = f;
+							} else {
+								if (f.tableSql.length === 0) {
+									this.retrieveResult3 = "No SQL scripts found.";
+									this.show_sql = false;
+									this.noUI = true;
+								} else {
+									this.show_sql = true;
+								    this.revtsqlOptions = f.tableSql;
+								    this.revvsqlOptions = f.viewSql;
+								    this.revpsqlOptions = f.procSql;
+									this.retrieveResult3 = "";
+								}
+							}
+							this.loading3 = false;
+						})
+						.catch(error => {
+							console.log(error);
+							if (error.response.status === 400) {
+								this.retrieveResult3 = "Please push 'Select' again.";
+								console.log("Push again");
+							} else {
+								console.log(error);
+							}
+							this.loading3 = false;
+						});
+					} else {
+						this.show_nr = true;
+						this.show_sql = false;
+						this.show_sql_result = false;
+						this.show_ui = false;
+						this.show_ui_result = false;
+						this.show_diff = false;
+						this.addedFunctions = [],
+						this.changedFunctions = [],
+						this.removedFunctions = [],
+						this.loading3 = true;
+						this.err400 = true;
+						axios.post('/revisions/' + this.envSelected)
+						.then(response => {
+							var f = response.data;
+							if (String(f).startsWith("svn")) {
+								console.log(f);
+								this.retrieveResult3 = f;
+							} else {
+							    this.revOptions = f.liveFlows;
+							    if (f.liveUiHtml !== 0) {
+							    	this.noUI = true;
+							    }
+							    this.revhuiOptions = f.liveUiHtml;
+							    this.revjuiOptions = f.liveUiJs;
+							    this.revcuiOptions = f.liveUiCss;
+							    this.revtsqlOptions = f.tableSql;
+							    this.revvsqlOptions = f.viewSql;
+							    this.revpsqlOptions = f.procSql;
+							    this.devrevno = f.devliveFlows[0];
+								this.liverevno = f.devliveFlows[1];
+							    this.devhuirevno = f.devliveUiHtml[0];
+								this.livehuirevno = f.devliveUiHtml[1];
+							    this.devjuirevno = f.devliveUiJs[0];
+								this.livejuirevno = f.devliveUiJs[1];
+							    this.devcuirevno = f.devliveUiCss[0];
+								this.livecuirevno = f.devliveUiCss[1];
+								this.retrieveResult3 = f.message;
+							}
+							this.loading3 = false;
+						})
+						.catch(error => {
+							console.log(error);
+							if (error.response.status === 400) {
+								this.retrieveResult3 = "Please push 'Select' again.";
+								console.log("Push again");
+							} else {
+								console.log(error);
+							}
+							this.loading3 = false;
+						});
+					}
+				},
+				onSubmitDevLiveFlows(event) {
+					event.preventDefault();
+					this.show_ui = false;
+					this.retrieveResult1 = "";
+					this.loading1 = true;
+					this.diffHead1 = "Branch"
+					this.diffHead2 = "Live"
+					axios.post('/devliveflows', {
+					    revno1: this.devrevno,
+					    revno2: this.liverevno
+					})
+					.then(response => {
+						this.retrieveResult1 = "";
+					    var f = response.data;
+					    console.log(f);
+						if (String(f).startsWith("svn")) {
+							this.retrieveResult1 = f;
+						} else {
+							if (f.added.length === 0 && f.changed.length === 0 && f.removed.length === 0) {
+								this.retrieveResult1 = "Flows are the same";
+								this.show_diff = false;
+							} else {
+								this.addedNodes = f.added;
+								this.changedNodes = f.changed;
+								this.removedNodes = f.removed;
+								this.show_diff = true;
+							}
+						}
+						this.loading1 = false;
+					})
+					.catch(error => {
+						if (error.response.status === 400) {
+							this.retrieveResult1 = "Please push 'Retrieve' again.";
+						} else if (error.response.status === 500) {
+							this.retrieveResult1 = "Please enter both revisions.";
+						} else {
+					    	console.log(error.message);
+						}
+						this.loading1 = false;
+					});
+				},
+				onSubmitDevLiveUiHtml(event) {
+					event.preventDefault();
+					this.retrieveResult5 = "";
+					this.loading5 = true;
+					this.show_diff = false;
+					this.diffHead1 = "Branch"
+					this.diffHead2 = "Live"
+					axios.post("/devliveuis/html", {
+					    revno1: this.devhuirevno,
+					    revno2: this.livehuirevno
+					})
+					.then(response => {
+						this.retrieveResult5 = "";
+					    var f = response.data;
+						if (String(f).startsWith("svn")) {
+							console.log(f);
+							this.retrieveResult5 = f;
+						} else {
+							if (f[0] === "" && f[1] === "") {
+								this.retrieveResult5 = "HTML files are the same";
+								this.show_ui = false;
+							} else {
+								this.uitype = "HTML file differences";
+								this.ui = f;
+								this.syncui();
+								this.show_ui = true;
+								this.show_ui_result = true;
+							}
+						}
+						this.loading5 = false;
+					})
+					.catch(error => {
+						if (error.response.status === 400) {
+							this.retrieveResult5 = "Please push 'Retrieve' again.";
+						} else if (error.response.status === 500) {
+							this.retrieveResult5 = "Please enter both revisions.";
+						} else {
+					    	console.log(error.message);
+						}
+						this.loading5 = false;
+					});
+				},
+				onSubmitDevLiveUiJs(event) {
+					event.preventDefault();
+					this.retrieveResult12 = "";
+					this.loading12 = true;
+					this.show_diff = false;
+					this.show_ui = true;
+					this.diffHead1 = "Branch"
+					this.diffHead2 = "Live"
+					axios.post("/devliveuis/js", {
+					    revno1: this.devjuirevno,
+					    revno2: this.livejuirevno
+					})
+					.then(response => {
+						this.retrieveResult12 = "";
+					    var f = response.data;
+						if (String(f).startsWith("svn")) {
+							console.log(f);
+							this.retrieveResult12 = f;
+						} else {
+							if (f[0] === "" && f[1] === "") {
+								this.retrieveResult12 = "Javascript files are the same";
+								this.show_ui = false;
+							} else {
+								this.uitype = "Javascript file differences";
+								this.ui = f;
+								this.syncui();
+								this.show_ui = true;
+								this.show_ui_result = true;
+							}
+						}
+						this.loading12 = false;
+					})
+					.catch(error => {
+						if (error.response.status === 400) {
+							this.retrieveResult12 = "Please push 'Retrieve' again.";
+						} else if (error.response.status === 500) {
+							this.retrieveResult12 = "Please enter both revisions.";
+						} else {
+					    	console.log(error.message);
+						}
+						this.loading12 = false;
+					});
+				},
+				onSubmitDevLiveUiCss(event) {
+					event.preventDefault();
+					this.retrieveResult13 = "";
+					this.loading13 = true;
+					this.show_diff = false;
+					this.show_ui = true;
+					this.diffHead1 = "Branch"
+					this.diffHead2 = "Live"
+					axios.post("/devliveuis/css", {
+					    revno1: this.devcuirevno,
+					    revno2: this.livecuirevno
+					})
+					.then(response => {
+						this.retrieveResult13 = "";
+					    var f = response.data;
+						if (String(f).startsWith("svn")) {
+							console.log(f);
+							this.retrieveResult13 = f;
+						} else {
+							if (f[0] === "" && f[1] === "") {
+								this.retrieveResult13 = "CSS files are the same";
+								this.show_ui = false;
+							} else {
+								this.uitype = "CSS file differences";
+								this.ui = f;
+								this.syncui();
+								this.show_ui = true;
+								this.show_ui_result = true;
+							}
+						}
+						this.loading13 = false;
+					})
+					.catch(error => {
+						if (error.response.status === 400) {
+							this.retrieveResult13 = "Please push 'Retrieve' again.";
+						} else if (error.response.status === 500) {
+							this.retrieveResult13 = "Please enter both revisions.";
+						} else {
+					    	console.log(error.message);
+						}
+						this.loading13 = false;
+					});
+				},
+				onSubmitLiveFlows(event) {
+					event.preventDefault();
+					if (this.currevno !== "" && this.prvrevno !== "") {
+						this.show_ui = false;
+						this.retrieveResult2 = "";
+						this.loading2 = true;
+						this.diffHead1 = "Current"
+						this.diffHead2 = "Previous"
+						axios.post("/flows", {
+						    revno1: this.currevno,
+						    revno2: this.prvrevno
+						})
+						.then(response => {
+							this.retrieveResult2 = "";
+						    var f = response.data;
+							if (String(f).startsWith("svn")) {
+								this.retrieveResult2 = f;
+							} else {
+								if (f.added.length === 0 && f.changed.length === 0 && f.removed.length === 0) {
+									this.retrieveResult2 = "Flows are the same";
+									this.show_diff = false;
+								} else {
+									this.addedNodess = f.added;
+									this.changedNodes = f.changed;
+									this.removedNodes = f.removed;
+									this.show_diff = true;
+								}
+							}
+							this.loading2 = false;
+						})
+						.catch(error => {
+							if (error.response.status === 400) {
+								this.retrieveResult2 = "Please push 'Retrieve' again.";
+							} else if (error.response.status === 500) {
+								this.retrieveResult2 = "Please enter both revisions.";
+							} else {
+						    	console.log(error.message);
+							}
+							this.loading2 = false;
+						});
+					} else {
+						this.retrieveResult2 = "Please enter both revisions.";
+					}
+				},
+				onSubmitLiveUiHtml(event) {
+					event.preventDefault();
+					if (this.curhuirevno !== "" && this.prvhuirevno !== "") {
+						this.retrieveResult4 = "";
+						this.loading4 = true;
+						this.show_diff = false;
+						this.show_ui = false;
+						this.diffHead1 = "Current"
+						this.diffHead2 = "Previous"
+						axios.post("/uis/html", {
+						    revno1: this.curhuirevno,
+						    revno2: this.prvhuirevno
+						})
+						.then(response => {
+							this.retrieveResult = "";
+						    var f = response.data;
+							if (String(f).startsWith("svn")) {
+								console.log(f);
+								this.retrieveResult4 = f;
+							} else {
+								if (f[0] === "" && f[1] === "") {
+									this.retrieveResult4 = "Html files are the same";
+									this.show_ui_result = false;
+								} else {
+									this.uitype = "HTML file differences";
+									this.ui = f;
+									this.syncui();
+									this.show_ui = true;
+									this.show_ui_result = true;
+								}
+							}
+							this.loading4 = false;
+						})
+						.catch(error => {
+						    console.log(error.message);
+							if (error.response.status === 400) {
+								this.retrieveResult4 = "Please push 'Retrieve' again.";
+							} else if (error.response.status === 500) {
+								this.retrieveResult4 = "Please enter both revisions.";
+							} else {
+						    	console.log(error.message);
+							}
+							this.loading4 = false;
+						});
+					} else {
+						this.retrieveResult4 = "Please enter both revisions.";
+					}
+				},
+				onSubmitLiveUiJs(event) {
+					event.preventDefault();
+					if (this.curjuirevno !== "" && this.prvjuirevno !== "") {
+						this.retrieveResult10 = "";
+						this.loading10 = true;
+						this.show_diff = false;
+						this.show_ui = false;
+						this.diffHead1 = "Current"
+						this.diffHead2 = "Previous"
+						axios.post("/uis/js", {
+						    revno1: this.curjuirevno,
+						    revno2: this.prvjuirevno
+						})
+						.then(response => {
+							this.retrieveResult = "";
+						    var f = response.data;
+							if (String(f).startsWith("svn")) {
+								console.log(f);
+								this.retrieveResult10 = f;
+							} else {
+								if (f[0] === "" && f[1] === "") {
+									this.retrieveResult10 = "Javascript files are the same";
+									this.show_ui_result = false;
+								} else {
+									this.uitype = "Javascript file differences";
+									this.ui = f;
+									this.syncui();
+									this.show_ui = true;
+									this.show_ui_result = true;
+								}
+							}
+							this.loading10 = false;
+						})
+						.catch(error => {
+						    console.log(error.message);
+							if (error.response.status === 400) {
+								this.retrieveResult10 = "Please push 'Retrieve' again.";
+							} else if (error.response.status === 500) {
+								this.retrieveResult10 = "Please enter both revisions.";
+							} else {
+						    	console.log(error.message);
+							}
+							this.loading10 = false;
+						});
+					} else {
+						this.retrieveResult10 = "Please enter both revisions.";
+					}
+				},
+				onSubmitLiveUiCss(event) {
+					event.preventDefault();
+					if (this.curcuirevno !== "" && this.prvcuirevno !== "") {
+						this.retrieveResult11 = "";
+						this.loading11 = true;
+						this.show_diff = false;
+						this.show_ui = false;
+						this.diffHead1 = "Current"
+						this.diffHead2 = "Previous"
+						axios.post("/uis/css", {
+						    revno1: this.curcuirevno,
+						    revno2: this.prvcuirevno
+						})
+						.then(response => {
+							this.retrieveResult = "";
+						    var f = response.data;
+							if (String(f).startsWith("svn")) {
+								console.log(f);
+								this.retrieveResult11 = f;
+							} else {
+								if (f[0] === "" && f[1] === "") {
+									this.retrieveResult11 = "CSS files are the same";
+									this.show_ui_result = false;
+								} else {
+									this.uitype = "CSS file differences";
+									this.ui = f;
+									this.syncui();
+									this.show_ui = true;
+									this.show_ui_result = true;
+								}
+							}
+							this.loading11 = false;
+						})
+						.catch(error => {
+							if (error.response.status === 400) {
+								this.retrieveResult11 = "Please push 'Retrieve' again.";
+							} else if (error.response.status === 500) {
+								this.retrieveResult11 = "Please enter both revisions.";
+							} else {
+						    	console.log(error.message);
+							}
+							this.loading11 = false;
+						});
+					} else {
+						this.retrieveResult11 = "Please enter both revisions.";
+					}
+				},
+				onSubmitTableSql(event) {
+					event.preventDefault();
+					if (this.curtsqlrevno !== "" && this.prvstqlrevno !== "") {
+						this.retrieveResult7 = "";
+						this.loading7 = true;
+						this.show_diff = false;
+						this.diffHead1 = "Current"
+						this.diffHead2 = "Previous"
+						axios.post("/sqls/tables", {
+						    revno1: this.curtsqlrevno,
+						    revno2: this.prvtsqlrevno
+						})
+						.then(response => {
+							this.retrieveResult = "";
+						    var f = response.data;
+						    console.log(f);
+							if (String(f).startsWith("svn")) {
+								this.retrieveResult7 = f;
+							} else {
+								if (f[0] === "" && f[1] === "") {
+									this.retrieveResult7 = "Table scripts are the same";
+									this.show_sql_result = false;
+								} else {
+									this.sqltype = "Tables sql script";
+									this.sqlresult = f;
+									this.show_sql_result = true;
+									this.syncsql();
+								}
+							}
+							this.loading7 = false;
+						})
+						.catch(error => {
+							if (error.response.status === 400) {
+								this.retrieveResult7 = "Please push 'Retrieve' again.";
+							} else if (error.response.status === 500) {
+								this.retrieveResult7 = "Please enter both revisions.";
+							} else {
+						    	console.log(error.message);
+							}
+							this.loading7 = false;
+						});
+					} else {
+						this.retrieveResult7 = "Please enter both revisions.";
+					}
+				},
+				onSubmitViewSql(event) {
+					event.preventDefault();
+					if (this.curvsqlrevno !== "" && this.prvvsqlrevno !== "") {
+						this.retrieveResult8 = "";
+						this.loading8 = true;
+						this.show_diff = false;
+						this.diffHead1 = "Current"
+						this.diffHead2 = "Previous"
+						axios.post("/sqls/views", {
+						    revno1: this.curvsqlrevno,
+						    revno2: this.prvvsqlrevno
+						})
+						.then(response => {
+							this.retrieveResult = "";
+						    var f = response.data;
+							if (String(f).startsWith("svn")) {
+								this.retrieveResult8 = f;
+							} else {
+								if (f[0] === "" && f[1] === "") {
+									this.retrieveResult8 = "View scripts are the same";
+									this.show_sql_result = false;
+								} else {
+									this.sqltype = "Views sql script";
+									this.sqlresult = f;
+									this.show_sql_result = true;
+									this.syncsql();
+								}
+							}
+							this.loading8 = false;
+						})
+						.catch(error => {
+							if (error.response.status === 400) {
+								this.retrieveResult8 = "Please push 'Retrieve' again.";
+							} else if (error.response.status === 500) {
+								this.retrieveResult8 = "Please enter both revisions.";
+							} else {
+						    	console.log(error.message);
+							}
+							this.loading8 = false;
+						});
+					} else {
+						this.retrieveResult8 = "Please enter both revisions.";
+					}
+				},
+				onSubmitProcSql(event) {
+					event.preventDefault();
+					if (this.curpsqlrevno !== "" && this.prvpsqlrevno !== "") {
+						this.retrieveResult9 = "";
+						this.loading9 = true;
+						this.show_diff = false;
+						this.diffHead1 = "Current"
+						this.diffHead2 = "Previous"
+						axios.post("/sqls/procedures", {
+						    revno1: this.curpsqlrevno,
+						    revno2: this.prvpsqlrevno
+						})
+						.then(response => {
+							this.retrieveResult = "";
+						    var f = response.data;
+							if (String(f).startsWith("svn")) {
+								this.retrieveResult9 = f;
+							} else {
+								if (f[0] === "" && f[1] === "") {
+									this.retrieveResult9 = "Procedure scripts are the same";
+									this.show_sql_result = false;
+								} else {
+									this.sqltype = "Procedures sql script";
+									this.sqlresult = f;
+									this.show_sql_result = true;
+									this.syncsql();
+								}
+							}
+							this.loading9 = false;
+						})
+						.catch(error => {
+							if (error.response.status === 400) {
+								this.retrieveResult9 = "Please push 'Retrieve' again.";
+							} else if (error.response.status === 500) {
+								this.retrieveResult9 = "Please enter both revisions.";
+							} else {
+						    	console.log(error.message);
+							}
+							this.loading9 = false;
+						});
+					} else {
+						this.retrieveResult9 = "Please enter both revisions.";
+					}
+				},
+				onCommit(event) {
+					this.commitResult = "";
+					event.preventDefault();
+					if (this.commitMsg !== "") {
+						this.committing = true;
+						axios.post("/commit/" + this.commitMsg, {})
+						.then(response => {
+							if (String(response.data).startsWith("svn")) {
+								this.commitResult = response.data;
+								this.alertType = "danger";
+							} else if (Number(response.data) < 0) {
+						    	this.commitResult = "Nothing to commit.";
+								this.alertType = "success";
+							} else {
+								this.commitResult = "Committed in revision " + response.data + ".\nRefresh the page to perform the a review";
+								this.alertType = "success";
+							}
+							this.commitMsg = "";
+							this.committing = false;
+							this.curLiveRev = response.data;
+						})
+						.catch(error => {
+							if (error.response.status === 400) {
+								this.commitResult = "Please push 'Commit' again."
+							} else {
+						    	console.log(error.message);
+							}
+							this.committing = false;
+						});
+					} else {
+						this.commitResult = "Please give a commit reason.";
+					}
+				},
+				onMergeAndCommit(event) {
+					this.commitResult = "";
+					event.preventDefault();
+					if (this.commitMsg !== "") {
+						this.committing = true;
+						axios.post("/mergecommit/" + this.commitMsg, {
+						    revno1: this.devrevno,
+						    revno2: this.devhuirevno,
+						    revno3: this.devjuirevno,
+						    revno4: this.devcuirevno
+						})
+						.then(response => {
+							if (String(response.data).startsWith("svn") || String(response.data).startsWith("Cannot")) {
+								this.commitResult = response.data;
+								this.alertType = "danger";
+							} else if (Number(response.data) < 0) {
+						    	this.commitResult = "Nothing to commit.";
+								this.alertType = "success";
+							} else if (Number(response.data) > 0) {
+								this.commitResult = "Committed in revision " + response.data;
+								this.alertType = "success";
+							} else {
+								this.commitResult = response.data;
+								this.alertType = "success";
+							}
+							this.committing = false;
+						})
+						.catch(error => {
+							console.log(error);
+							if (error.response.status === 400) {
+								this.commitResult = "Please push 'Commit' again."
+							} else {
+						    	console.log(error.message);
+							}
+							this.committing = false;
+						});
+						console.log("Merge&Commit sent");
+					} else {
+						this.commitResult = "Please give a commit reason.";
+					}
+				},
+				sync(event) {
+					this.$nextTick(function() {
+						this.reset(event);
+					}
+				)},
+    			reset(event) {
+					var elems = this.$el.getElementsByClassName("syncscroll");
+					var el1 = elems[0];
+					var el2 = elems[1];
+			        // clearing existing listeners
+					if (event.target.innerText === "Hide Code") {
+						el1.removeEventListener('scroll', el1.syn, 0);
+						el2.removeEventListener('scroll', el2.syn, 0);
+				        // setting-up the new listeners
+			            el1.eX = el1.eY = el2.eX = el2.eY = 0;
+						this.syncScroll(el1, el2);
+						this.syncScroll(el2, el1);
+					}
+			    },
+				syncui(event) {
+					this.$nextTick(function() {
+						this.resetui(event);
+					}
+				)},
+    			resetui(event) {
+					var elems = this.$el.getElementsByClassName("syncscrollui");
+					var el1 = elems[0];
+					var el2 = elems[1];
+					// clearing existing listeners
+					el1.removeEventListener('scroll', el1.syn, 0);
+					el2.removeEventListener('scroll', el2.syn, 0);
+			        // setting-up the new listeners
+		            el1.eX = el1.eY = el2.eX = el2.eY = 0;
+					this.syncScroll(el1, el2);
+					this.syncScroll(el2, el1);
+			    },
+				syncsql(event) {
+					this.$nextTick(function() {
+						this.resetsql(event);
+					}
+				)},
+    			resetsql(event) {
+					var elems = this.$el.getElementsByClassName("syncscrollsql");
+					var el1 = elems[0];
+					var el2 = elems[1];
+					// clearing existing listeners
+					el1.removeEventListener('scroll', el1.syn, 0);
+					el2.removeEventListener('scroll', el2.syn, 0);
+			        // setting-up the new listeners
+		            el1.eX = el1.eY = el2.eX = el2.eY = 0;
+					this.syncScroll(el1, el2);
+					this.syncScroll(el2, el1);
+			    },
+				syncScroll(el, otherEl) {
+	                el.addEventListener('scroll', el.syn = function() {
+                        var scrollX = el.scrollLeft;
+                        var scrollY = el.scrollTop;
+                        var xRate = scrollX / (el.scrollWidth - el.clientWidth);
+                        var yRate = scrollY / (el.scrollHeight - el.clientHeight);
+                        var updateX = scrollX != el.eX;
+                        var updateY = scrollY != el.eY;
+                        el.eX = scrollX;
+                        el.eY = scrollY;
+                        if (updateX && Math.round(otherEl.scrollLeft -
+								(scrollX = otherEl.eX = Math.round(xRate * (otherEl.scrollWidth - otherEl.clientWidth))))
+                        ) { otherEl.scrollLeft = scrollX; }
+                        if (updateY && Math.round(otherEl.scrollTop -
+                                (scrollY = otherEl.eY = Math.round(yRate * (otherEl.scrollHeight - otherEl.clientHeight))))
+                        ) { otherEl.scrollTop = scrollY; }
+                    }, 0);
+				},
+				getCookie(cname) {
+					let name = cname + "=";
+					let decodedCookie = decodeURIComponent(document.cookie);
+					let ca = decodedCookie.split(';');
+					for(let i = 0; i <ca.length; i++) {
+						let c = ca[i];
+						while (c.charAt(0) == ' ') {
+							c = c.substring(1);
+						}
+						if (c.indexOf(name) == 0) {
+							return c.substring(name.length, c.length);
+						}
+					}
+					return "";
+				},
+				setCookie(cname, cvalue, exdays) {
+					const d = new Date();
+					d.setTime(d.getTime() + (exdays*24*60*60*1000));
+					let expires = "expires="+ d.toUTCString();
+					document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+				},
+				checkCookies() {
+					this.uname = this.getCookie("SvnUser");
+					this.pwd = this.getCookie("SvnPwd");
+					if (this.uname === "" || this.pwd === "") {
+						this.$refs['login'].show();
+					} else {
+						this.collapse_col();
+						this.loading = true;
+						this.getBranches();
+					}
+				},
+				handleLoginOk(bvModalEvt) {
+					// Prevent modal from closing
+					bvModalEvt.preventDefault();
+					this.handleLoginSubmit();
+				},
+				handleLoginSubmit() {
+					const valid = true;
+					if (this.uname === "") {
+						this.nameState = false;
+						valid = false;
+					}
+					if (this.pwd === "") {
+						this.pwdState = false;
+						valid = false;
+					}
+					if (!valid)	return;
+					// Hide the modal manually
+					this.$nextTick(() => {
+						this.$bvModal.hide('login');
+					});
+					this.setCookie("SvnUser", this.uname, 365);
+					this.setCookie("SvnPwd", this.pwd, 365);
+					this.collapse_col();
+					this.loading = true;
+					this.getBranches();
+				},
+				getBranches() {
+					axios.post('/branches', {withCredentials: true})
+					.then(response => {
+						var f = response.data;
+						console.log(f);
+						if (String(f).startsWith("svn")) {
+							this.retrieveResult3 = f;
+						} else {
+							this.hasChanges = response.data.hasChanges;
+							for (env of response.data.branches) {
+						    	this.envOptions.push({value: env, text: "Branch " + env});
+							}
+						    this.envOptions.push({value: "sql", text: "SQL scripts"});
+							this.selBranch = "Select branch (current live rev# is " + response.data.curLiveRev + ")";
+						}
+						this.loading = false;
+						this.initializing = false;
+					})
+					.catch(error => {
+				    	console.log(error.message);
+						this.loading = false;
+						this.initializing = false;
+					});
+				}
+			},
+			mounted: function() {
+				this.initializing = true;
+				this.checkCookies();
+			}
+		})
+ </script>
+</html>
