@@ -18,7 +18,7 @@
  */
 
 
-package nl.das.nrdevmgr.branchmgr;
+package nl.das.nrdevmgr;
 
 import java.nio.ByteBuffer;
 import java.util.UUID;

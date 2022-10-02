@@ -18,9 +18,9 @@
  */
 
 
-package nl.das.nrdevmgr.branchmgr.model;
+package nl.das.nrdevmgr.model;
 
-import com.google.gson.JsonObject;
+import javax.json.JsonObject;
 
 /**
  *

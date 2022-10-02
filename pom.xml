@@ -4,15 +4,15 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>nl.corevision</groupId>
-	<artifactId>anydbmgr</artifactId>
+	<groupId>nl.das</groupId>
+	<artifactId>nrdevmgr</artifactId>
 	<version>1.0.0</version>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.build.javaVersion>11</project.build.javaVersion>
-		<assembly.mainClass.trunk>nl.corevision.anydbmgr.AnyDBManager</assembly.mainClass.trunk>
-		<assembly.mainClass.branch>nl.corevision.anydbmgr.BranchManager</assembly.mainClass.branch>
+		<assembly.mainClass.trunk>nl.das.nrdevmgr.TrunkManager</assembly.mainClass.trunk>
+		<assembly.mainClass.branch>nl.das.nrdevmgr.BranchManager</assembly.mainClass.branch>
 		<picocli.version>4.5.2</picocli.version>
 		<logback.version>1.2.3</logback.version>
 		<slf4j.version>1.7.30</slf4j.version>
@@ -35,10 +35,29 @@
 			<artifactId>java-diff-utils</artifactId>
 			<version>4.9</version>
 		</dependency>
+		<!-- JSON-P RI -->
 		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
-			<version>2.8.5</version>
+			<groupId>org.glassfish</groupId>
+			<artifactId>javax.json</artifactId>
+			<version>1.1.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.parsson</groupId>
+			<artifactId>parsson</artifactId>
+			<version>1.1.1</version>
+		</dependency>
+		<!-- JSON-B API -->
+		<dependency>
+			<groupId>jakarta.json.bind</groupId>
+			<artifactId>jakarta.json.bind-api</artifactId>
+			<version>1.0.1</version>
+		</dependency>
+		<!-- Yasson (JSON-B RI) -->
+		<dependency>
+			<groupId>org.eclipse</groupId>
+			<artifactId>yasson</artifactId>
+			<version>1.0.3</version>
+			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.tmatesoft.svnkit</groupId>
@@ -86,7 +105,6 @@
 	</dependencies>
 
 	<build>
-		<finalName>anydbmgr</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -94,6 +112,7 @@
 				<version>3.2.4</version>
 				<executions>
 					<execution>
+						<id>trunk</id>
 						<phase>package</phase>
 						<goals>
 							<goal>shade</goal>
@@ -118,16 +137,11 @@
 									</excludes>
 								</filter>
 							</filters>
+							<finalName>nrtrunkmgr</finalName>
 						</configuration>
 					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-shade-plugin</artifactId>
-				<version>3.2.4</version>
-				<executions>
 					<execution>
+						<id>branch</id>
 						<phase>package</phase>
 						<goals>
 							<goal>shade</goal>
@@ -149,15 +163,20 @@
 										<exclude>META-INF/*.SF</exclude>
 										<exclude>META-INF/*.DSA</exclude>
 										<exclude>META-INF/*.RSA</exclude>
+										<exclude>META-INF/MANIFEST.MF</exclude>
+										<exclude>META-INF/LICENSE.txt</exclude>
+										<exclude>META-INF/NOTICE.txt</exclude>
 									</excludes>
 								</filter>
 							</filters>
+							<finalName>nrbranchmgr</finalName>
 						</configuration>
 					</execution>
 				</executions>
 			</plugin>
 			<plugin>
 				<artifactId>maven-clean-plugin</artifactId>
+				<version>3.2.0</version>
 				<executions>
 					<execution>
 						<id>default-clean</id>
@@ -170,6 +189,7 @@
 			</plugin>
 			<plugin>
 				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.3.0</version>
 				<executions>
 					<execution>
 						<id>default-testResources</id>
@@ -189,6 +209,7 @@
 			</plugin>
 			<plugin>
 				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.3.0</version>
 				<executions>
 					<execution>
 						<id>default-jar</id>
@@ -201,6 +222,7 @@
 			</plugin>
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.10.1</version>
 				<executions>
 					<execution>
 						<id>default-compile</id>
@@ -229,6 +251,7 @@
 			</plugin>
 			<plugin>
 				<artifactId>maven-install-plugin</artifactId>
+				<version>3.0.1</version>
 				<executions>
 					<execution>
 						<id>default-install</id>
@@ -241,6 +264,7 @@
 			</plugin>
 			<plugin>
 				<artifactId>maven-deploy-plugin</artifactId>
+				<version>3.0.0</version>
 				<executions>
 					<execution>
 						<id>default-deploy</id>

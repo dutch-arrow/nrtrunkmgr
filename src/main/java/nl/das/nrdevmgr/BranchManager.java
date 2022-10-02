@@ -29,7 +29,6 @@ import java.util.Properties;
 import org.tmatesoft.svn.core.SVNException;
 
 import fi.iki.elonen.NanoHTTPD;
-import nl.das.nrdevmgr.branchmgr.Webserver;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ParameterException;
@@ -43,7 +42,7 @@ import picocli.CommandLine.ParseResult;
  * Merges slave flows.json into master flows.json resulting in the merged flows.json
  *
  */
-@Command(name = "BranchManager", version = "(c) 2022, Core|Vision B.V.")
+@Command(name = "BranchManager", version = "(c) 2022, Dutch Arrow Software")
 public class BranchManager {
 	@Parameters(paramLabel = "<properties filepath>", defaultValue = "branchmgr.properties", description = "Path of the properties file")
 	static String propFilePath;
@@ -69,7 +68,7 @@ public class BranchManager {
 		try {
 			Properties props = new Properties();
 			props.load(new FileInputStream(propFilePath));
-			Webserver srv = new Webserver(props);
+			Webserver srv = new Webserver(props,"branch");
 			srv.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
 		} catch (IOException e) {
 			e.printStackTrace();

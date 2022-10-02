@@ -28,110 +28,19 @@
 	<!-- Load the following for BootstrapVueIcons support -->
 	<script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue-icons.min.js"></script>
 	<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-	<title>Branch Manager</title>
-	<style>
-
-		.code2 {
-			font-family: "Monaco", "Courier New", monospace;
-			font-size: smaller;
-			height: 600px;
-			width: 100%;
-			white-space: pre;
-			overflow: scroll;
-			border-width: 1px;
-			border-style: solid;
-			line-height: 1.5;
-			padding: 3px;
-		}
-
-		.code1 {
-			font-family: "Monaco", "Courier New", monospace;
-			font-size: smaller;
-			height: 600px;
-			width: 100%;
-			white-space: nowrap;
-			overflow: scroll;
-		}
-
-		.col-code {
-			width: 45%;
-		}
-
-		.del {
-			background-color: orange;
-		}
-
-		.add {
-			background-color: lightgreen;
-		}
-
-		.navbar-menu-title {
-			margin: auto;
-			color: white !important;
-			font-size: 24px;
-		}
-
-		h4 {
-			color: darkblue;
-			font-size: 20px;
-		}
-
-		hr {
-			margin-top: 5px;
-			margin-bottom: 0;
-			height: 2px !important;
-			opacity: 1;
-		}
-
-		#selenv {
-			font-size: 18px;
-			padding: 5px;
-			width: 100%;
-		}
-
-		#currevno,
-		#prvrevno {
-			font-size: 18px;
-			padding: 5px 10px 5px 10px;
-		}
-
-		#collapse_button {
-			font-size: 24px;
-			font-weight: bolder;
-			padding: 0px 10px 0px 10px;
-		}
-
-		.nav-tabs {
-			font-size: 20px;
-		}
-
-		.card-header {
-			font-size: 24px;
-		}
-
-		.card-body {
-			padding: 5px;
-		}
-
-		.form-control-plaintext {
-			font-size: 18px;
-			padding: 0px 10px 0px 10px;
-		}
-
-		.result-card-title .card-body h4.card-title {
-			text-align: center;
-			font-size: 28px;
-		}
-	</style>
+	
+	<style><include>/branchpage.css</include></style>
+	<title>Nodered Branch Manager</title>
 </head>
 
 <body>
 	<div id="app">
 		<b-navbar type="dark" variant="primary">
-			<b-button id="collapse_button" variant="primary" @click="collapse_col" v-b-tooltip.hover.right :title="collapse_col_tooltip">{{collapse_col_text}}</b-button>
-			<div class="navbar-menu-title">AnyDB Branch Manager</div>
-			<b-button v-on:click="resetCredentials" class="mr-2" variant="primary" style="float: right;">Reset credentials</b-button>
+			<b-button id="collapse_button" variant="primary" @click="collapse_column" v-b-tooltip.hover.right :title="collapse_col_tooltip">{{collapse_col_text}}</b-button>
+			<div class="navbar-menu-title">Nodered Branch Manager</div>
+			<b-button v-on:click="resetCredentials" class="mr-2" variant="primary" style="float:right">Reset credentials</b-button>
 		</b-navbar>
+		<!-- SVN Login dialog -->
 		<b-modal id="login" ref="login" title="Enter your SVN credentials" @ok="handleLoginOk" hide-header-close>
 			<form ref="form" @submit.stop.prevent="handleLoginSubmit">
 				<b-form-group label="Username" label-for="name-input" invalid-feedback="Username is required" :state="nameState">
@@ -142,13 +51,16 @@
 				</b-form-group>
 			</form>
 		</b-modal>
+		<!-- Main page: two vertical sections (width 3 and 9) -->
 		<b-container fluid v-show="!initializing && !showMergeCode && !showMergeUi">
 			<b-row>
-				<b-col cols="3" v-show="!collapse">
+				<!-- Left column when WC is not dirty -->
+				<b-col cols="3" v-show="!collapse && hasChanges == 0">
 				    <h4 class="sr-only" >Current branch</h4>
 					<b-form-input v-model="branchName" plaintext readonly class="border"></b-form-input>
-					<b-alert v-show="retrieveResult6 !== ''" :variant=errmsg show>{{ retrieveResult6 }}</b-alert>
+					<b-alert v-show="retrieveResult.branchName !== ''" :variant=errmsg show>{{ retrieveResult.branchName }}</b-alert>
 					<div class="accordion mt-4" role="tablist">
+						<!-- Create a new Branch -->
 						<b-card no-body>
 							<b-card-header header-tag="header" class="p-1" role="tab">
 								<b-button style="width:100%;" v-b-toggle.collapse-1 variant="outline-primary" fill>Create a new Branch</b-button>
@@ -167,10 +79,10 @@
 													<b-button style="width:100%;" v-on:click="createBranch" class="mr-0" variant="primary">Create Branch</b-button>
 												</b-col>
 									        </b-row>
-									        <b-overlay :show="loading5" variant="light" opacity="0.6" rounded="sm">
-											<b-row v-show="retrieveResult5 !== ''">
+									        <b-overlay :show="loading.createBranch" variant="light" opacity="0.6" rounded="sm">
+											<b-row v-show="retrieveResult.createBranch !== ''">
 												<b-col class="mt-3">
-													<b-alert variant="success" show>{{ retrieveResult5 }}</b-alert>
+													<b-alert :variant=errmsg show>{{ retrieveResult.createBranch }}</b-alert>
 												</b-col>
 											</b-row>
 										</b-container>
@@ -178,9 +90,10 @@
 								</b-card-body>
 							</b-collapse>
 						</b-card>
+						<!-- Merge Trunk Flows into Branch -->
 						<b-card no-body>
 							<b-card-header header-tag="header" class="p-1" role="tab">
-								<b-button :disabled="uptodate" style="width:100%;" v-b-toggle.collapse-2 variant="outline-primary" fill>Merge LIVE Flows into Branch</b-button>
+								<b-button :disabled="uptodate" style="width:100%;" v-b-toggle.collapse-2 variant="outline-primary" fill>Merge Trunk Flows into Branch</b-button>
 							</b-card-header>
 							<b-collapse id="collapse-2" accordion="my-accordion">
 								<b-card-body>
@@ -191,10 +104,10 @@
 													<b-button size="sm" v-on:click="diffFlows" class="mr-2" variant="primary">Open Merge page</b-button>
 												</b-col>
 									        </b-row>
-									        <b-overlay :show="loading0" variant="light" opacity="0.6" rounded="sm">
-											<b-row v-show="retrieveResult0 !== ''">
+									        <b-overlay :show="loading.diffFlows" variant="light" opacity="0.6" rounded="sm">
+											<b-row v-show="retrieveResult.diffFlows !== ''">
 												<b-col class="mt-3">
-													<b-alert variant="success" show>{{ retrieveResult0 }}</b-alert>
+													<b-alert :variant=errmsg show>{{ retrieveResult.diffFlows }}</b-alert>
 												</b-col>
 											</b-row>
 										</b-container>
@@ -202,23 +115,24 @@
 								</b-card-body>
 							</b-collapse>
 						</b-card>
+						<!-- Merge Trunk UI into Branch -->
 						<b-card no-body>
 							<b-card-header header-tag="header" class="p-1" role="tab">
-								<b-button :disabled="uptodate || !hasUI" style="width:100%;" v-b-toggle.collapse-3 variant="outline-primary" fill>Merge LIVE UI into Branch</b-button>
+								<b-button :disabled="uptodate || !hasUI" style="width:100%;" v-b-toggle.collapse-3 variant="outline-primary" fill>Merge Trunk UI into Branch</b-button>
 							</b-card-header>
 							<b-collapse id="collapse-3" accordion="my-accordion">
 								<b-card-body>
 									<b-form>
 										<b-container fluid style="padding-left: 0;">
-									        <b-overlay :show="loading2" variant="light" opacity="0.6" rounded="sm">
+									        <b-overlay :show="loading.diffui" variant="light" opacity="0.6" rounded="sm">
 									        <b-row>
 									        	<b-col>
 													<b-button v-on:click="diffUI('html')" class="mr-2" variant="primary">Open Merge HTML page</b-button>
 												</b-col>
 									        </b-row>
-											<b-row v-show="retrieveResult2 !== ''">
+											<b-row v-show="retrieveResult.diffhtml !== ''">
 												<b-col class="mt-3">
-													<b-alert variant="success" show>{{ retrieveResult2 }}</b-alert>
+													<b-alert :variant=errmsg show>{{ retrieveResult.diffhtml }}</b-alert>
 												</b-col>
 											</b-row>
 									        <b-row>
@@ -226,9 +140,9 @@
 													<b-button v-on:click="diffUI('js')" class="mr-2 mt-2" variant="primary">Open Merge Js page</b-button>
 												</b-col>
 									        </b-row>
-											<b-row v-show="retrieveResult3 !== ''">
+											<b-row v-show="retrieveResult.diffjs !== ''">
 												<b-col class="mt-3">
-													<b-alert variant="success" show>{{ retrieveResult3 }}</b-alert>
+													<b-alert :variant=errmsg show>{{ retrieveResult.diffjs }}</b-alert>
 												</b-col>
 											</b-row>
 									        <b-row>
@@ -236,9 +150,9 @@
 													<b-button v-on:click="diffUI('css')" class="mr-2 mt-2" variant="primary">Open Merge Css page</b-button>
 												</b-col>
 									        </b-row>
-											<b-row v-show="retrieveResult4 !== ''">
+											<b-row v-show="retrieveResult.diffcss !== ''">
 												<b-col class="mt-3">
-													<b-alert variant="success" show>{{ retrieveResult4 }}</b-alert>
+													<b-alert :variant=errmsg show>{{ retrieveResult.diffcss }}</b-alert>
 												</b-col>
 											</b-row>
 										</b-container>
@@ -246,6 +160,7 @@
 								</b-card-body>
 							</b-collapse>
 						</b-card>
+						<!-- Update Branch -->
 						<b-card no-body>
 							<b-card-header header-tag="header" class="p-1" role="tab">
 								<b-button :disabled="disableUpdate()" style="width:100%;" v-b-toggle.collapse-4 variant="outline-primary" fill>Update Branch</b-button>
@@ -256,13 +171,13 @@
 										<b-container fluid style="padding-left: 0;">
 									        <b-row>
 									        	<b-col>
-													<b-button :disabled="disableUpdate()" size="sm" v-on:click="updateBranch" class="mr-2" variant="primary">Update Branch</b-button>
+													<b-button size="sm" v-on:click="updateBranch" class="mr-2" variant="primary">Update Branch</b-button>
 												</b-col>
 									        </b-row>
-									        <b-overlay :show="loading6" variant="light" opacity="0.6" rounded="sm">
-											<b-row v-show="retrieveResult6 !== ''">
+									        <b-overlay :show="loading.updbranch" variant="light" opacity="0.6" rounded="sm">
+											<b-row v-show="retrieveResult.updbranch !== ''">
 												<b-col class="mt-3">
-													<b-alert variant="success" show>{{ retrieveResult6 }}</b-alert>
+													<b-alert :variant=errmsg show>{{ retrieveResult.updbranch }}</b-alert>
 												</b-col>
 											</b-row>
 										</b-container>
@@ -270,9 +185,10 @@
 								</b-card-body>
 							</b-collapse>
 						</b-card>
+						<!-- Remove Branches -->
 						<b-card no-body>
 							<b-card-header header-tag="header" class="p-1" role="tab">
-								<b-button style="width:100%;" v-b-toggle.collapse-5 variant="outline-primary" fill v-on:click="refreshList">Remove Branches</b-button>
+								<b-button  :disabled="disableRemove()" style="width:100%;" v-b-toggle.collapse-5 variant="outline-primary" fill v-on:click="refreshList">Remove Branches</b-button>
 							</b-card-header>
 							<b-collapse id="collapse-5" accordion="my-accordion">
 								<b-card-body>
@@ -283,13 +199,13 @@
 													<b-form-select style="width:100%;" v-model="selected" :options="myBranches" multiple></b-form-select>
 									        	</b-col>
 									        	<b-col>
-													<b-button style="width:100%;" :disabled="disableRemove()" v-on:click="removeBranches" class="mr-0" variant="primary" fill>Remove</b-button>
+													<b-button style="width:100%;" v-on:click="removeBranches" class="mr-0" variant="primary" fill>Remove</b-button>
 												</b-col>
 									        </b-row>
-									        <b-overlay :show="loading7" variant="light" opacity="0.6" rounded="sm">
-											<b-row v-show="retrieveResult7 !== ''">
+									        <b-overlay :show="loading.delbranch" variant="light" opacity="0.6" rounded="sm">
+											<b-row v-show="retrieveResult.delbranch !== ''">
 												<b-col class="mt-3">
-													<b-alert variant="success" show>{{ retrieveResult7 }}</b-alert>
+													<b-alert :variant=errmsg show>{{ retrieveResult.delbranch }}</b-alert>
 												</b-col>
 											</b-row>
 										</b-container>
@@ -299,11 +215,45 @@
 						</b-card>
 					</div>
 				</b-col>
-				<b-col :cols="mainWidth" v-show="showMergeFlows">
+				<!-- Left column content when WC is dirty -->
+				<b-col cols="3" v-show="!collapse && hasChanges !== 0">
+					<b-alert variant="warning" show>There are uncommitted modifications.<br/>Please commit them first.</b-alert>
+					<!--  
+					<b-card title="Show Changes">
+						<b-overlay :show="loading.dirty" variant="light" opacity="0.6" rounded="sm">
+						<b-button class="pl-5" variant="primary" @click="diffFlows" v-show="hasChanges === 1 || hasChanges === 3">Flows</b-button>
+						<b-button class="pl-5" variant="primary" @click="diffUI" v-show="hasChanges === 2 || hasChanges === 3">UI</b-button>
+						<div v-show="!loading.dirty">{{ retrieveResult.dirty }}</div>
+					</b-card>
+					-->
+					<b-card title="Commit Branch changes">
+						<b-form @submit="onCommit">
+							<b-container fluid style="padding-left: 0;">
+						        <b-overlay :show="committing" variant="light" opacity="0.6" rounded="sm">
+								<b-row>
+									<b-col cols="8">
+										<b-form-textarea v-model="commitMsg" placeholder="Enter commit message" rows="1" max-rows="3"></b-form-textarea>
+									</b-col>
+									<b-col>
+										<b-button style="width:100%;" type="submit" variant="primary">Commit</b-button>
+									</b-col>
+								</b-row>
+								<b-row v-show="commitResult !== ''">
+									<b-col class="mt-2">
+										<b-alert variant="success" show v-show="!committing">{{ commitResult }}</b-alert>
+									</b-col>
+								</b-row>
+							</b-container>
+						</b-form>
+					</b-card>
+				</b-col>
+				<!-- Right column content -->
+				<b-col :cols="mainWidth" v-show="showMergeFlows && hasChanges === 0">
 					<b-card notitle >
 						<b-tabs card fill>
-							<b-tab title="Nodes only in live" active>
-								<b-table small sticky-header="700px" :items="addedNodes" :fields="nodeFields">
+							<b-tab title="Nodes only in trunk" active>
+								<!-- 5-column table: add | tabName | nodeName | nodeContent.type | show_details -->
+								<b-table small sticky-header="700px" :items="addedNodes" :fields="nodeAddedFields">
 									<template #table-colgroup="data">
 									    <col style="width:5%" center>
 									    <col style="width:20%">
@@ -331,6 +281,7 @@
 								</b-table>
 							</b-tab>
 							<b-tab title="Nodes changed">
+								<!-- 5-column table: tabName | nodeName | nodeContent.type | whatChanged | show_details -->
 								<b-table small sticky-header="700px" :items="changedNodes" :fields="nodeChangedFields" ref="cn">
 									<template #table-colgroup="data">
 										<col style="width:20%">
@@ -352,33 +303,36 @@
 				</b-col>
 			</b-row>
 		</b-container>
+		<!-- Full screen page for code merging -->
 		<b-container fluid v-show="showMergeCode || showMergeUi">
 			<b-row>
+				<!-- when merging UI (html, js and css) -->
 				<b-col cols="12" v-show="showMergeUi">
 					<b-button size="sm" v-on:click="doneMergingUi" class="mr-2" variant="primary" style="margin-top: 2px;">Done</b-button>
 					<b-card>
 						<b-row>
 							<b-col class="col-code">
-								<label style="font-weight: bolder;">{{diffHead1}}</label>
+								<label style="font-weight: bolder;">Branch</label>
 								<b-form-textarea name="syncscroll3" class="syncscrollui code1" v-model="ui[0]"></b-form-textarea>
 							</b-col>
 							<b-col class="col-code">
-								<label style="font-weight: bolder;">{{diffHead2}}</label>
+								<label style="font-weight: bolder;">Trunk</label>
 								<div name="syncscroll4" class="syncscrollui code2" v-html="ui[1]"></div>
 							</b-col>
 						</b-row>
 					</b-card>
 				</b-col>
+				<!-- when merging function code -->
 				<b-col cols="12" v-show="showMergeCode">
 					<b-button size="sm" v-on:click="doneMergingCode" class="mr-2" variant="primary" style="margin-top: 2px;">Done</b-button>
 					<b-card>
 						<b-row>
 							<b-col class="col-code">
-								<label style="font-weight: bolder;">{{diffHead1}}</label>
+								<label style="font-weight: bolder;">Branch</label>
 								<b-form-textarea name="syncscroll1" class="syncscroll code1" v-model="currow.curHtml"></b-form-textarea>
 							</b-col>
 							<b-col class="col-code">
-								<label style="font-weight: bolder;">{{diffHead2}}</label>
+								<label style="font-weight: bolder;">Trunk</label>
 								<div name="syncscroll2" class="syncscroll code2" v-html="currow.prvHtml"></div>
 							</b-col>
 						</b-row>
@@ -387,471 +341,7 @@
 			</b-row>
 		</b-container>
 	</div>
+	<script><include>/branchpage.js</include></script>
 </body>
-<script>
-	window.app = new Vue({
-		el: '#app',
-		data: function () {
-			return {
-				uname: "",
-				nameState: null,
-				pwd: "",
-				pwdState: null,
-				initializing: true,
-				loading0: false,
-				loading1: false,
-				loading2: false,
-				loading5: false,
-				loading6: false,
-				loading7: false,
-				retrieveResult0: "",
-				retrieveResult1: "",
-				retrieveResult2: "",
-				retrieveResult3: "",
-				retrieveResult4: "",
-				retrieveResult5: "",
-				retrieveResult6: "",
-				retrieveResult7: "",
-				errmsg: "danger",
-				uptodate: false,
-				canUpdate: false,
-				addedNodes: [],
-				changedNodes: [],
-				nodeChangedFields: [
-					{key: "tabName", label: "Tab"},
-					{key: "nodeName", label: "Node"},
-					{key: "nodeContent.type", label: "Type"},
-					{key: "whatChanged", label: "what changed?"},
-					{key: "show_details", label: "Code"}
-				],
-				nodeFields: [
-					{key: "add", label: "Add?"},
-					{key: "tabName", label: "Tab"},
-					{key: "nodeName", label: "Node"},
-					{key: "nodeContent.type", label: "Type"},
-					{key: "show_details", label: "Code"}
-				],
-				err400: false,
-				collapse: false,
-				collapse_col_text: "<",
-				collapse_col_tooltip: "Close left column",
-				mainWidth: "9",
-				showMergeFlows: false,
-				showMergeCode: false,
-				showMergeUi: false,
-				branchName: "",
-				newBranchName: "",
-				branch:"remove",
-				diffHead1: "Branch",
-				diffHead2: "Live",
-				uiType: "html",
-				ui: ["",""],
-				hasUI: false,
-				html: "",
-				js: "",
-				css: "",
-				currow: {},
-				curix: -1,
-				curcolor: "primary",
-				mergedCode: [],
-				mergedNodes: [],
-				merged: [],
-				selected: [],
-				myBranches:[]
-			};
-		},
-		computed: {
-		},
-		methods: {
-			refresh() {
-				window.location.reload();
-			},
-			collapse_col() {
-				this.collapse = !this.collapse;
-				this.mainWidth = this.collapse ? "12" : "9";
-				this.collapse_col_text = this.collapse ? ">" : "<";
-				this.collapse_col_tooltip = this.collapse ? "Open left column" : "Close left column";
-			},
-			disableUpdate() {
-				this.merged[0] = true;
-				for (var row of this.changedNodes) {
-					this.merged[0] = this.merged[0] && row.merged;
-				}
-				var tmp = this.uptodate || !(this.merged[0] && this.merged[1] && this.merged[2] && this.merged[3]);
-				return tmp; 
-			},
-			disableRemove() {
-				return (this.myBranches.length === 1 && this.myBranches[0] === this.branchName) || this.myBranches.length === 0;
-			},
-			getCookie(cname) {
-				let name = cname + "=";
-				let decodedCookie = decodeURIComponent(document.cookie);
-				let ca = decodedCookie.split(';');
-				for(let i = 0; i <ca.length; i++) {
-					let c = ca[i];
-					while (c.charAt(0) == ' ') {
-						c = c.substring(1);
-					}
-					if (c.indexOf(name) == 0) {
-						return c.substring(name.length, c.length);
-					}
-				}
-				return "";
-			},
-			setCookie(cname, cvalue, exdays) {
-				const d = new Date();
-				d.setTime(d.getTime() + (exdays*24*60*60*1000));
-				let expires = "expires="+ d.toUTCString();
-				document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
-			},
-			checkCookies() {
-				this.uname = this.getCookie("SvnUser");
-				this.pwd = this.getCookie("SvnPwd");
-				if (this.uname === "" || this.pwd === "") {
-					this.$refs['login'].show();
-				} else {
-					this.initializing = false;
-				}
-			},
-			handleLoginOk(bvModalEvt) {
-				// Prevent modal from closing
-				bvModalEvt.preventDefault();
-				this.handleLoginSubmit();
-			},
-			handleLoginSubmit() {
-				const valid = true;
-				if (this.uname === "") {
-					this.nameState = false;
-					valid = false;
-				}
-				if (this.pwd === "") {
-					this.pwdState = false;
-					valid = false;
-				}
-				if (!valid)	return;
-				// Hide the modal manually
-				this.$nextTick(() => {
-					this.$bvModal.hide('login');
-				});
-				this.setCookie("SvnUser", this.uname, 365);
-				this.setCookie("SvnPwd", this.pwd, 365);
-				this.initializing = false;
-			},
-			resetCredentials() {
-				this.$refs['login'].show();
-			},
-			handleMergeOk(bvModalEvt) {
-				// Prevent modal from closing
-				bvModalEvt.preventDefault();
-				this.handleMergeSubmit();
-			},
-			handleMergeSubmit() {
-				// Hide the modal manually
-				this.$nextTick(() => {
-					this.$bvModal.hide('merge');
-				});
-				this.loading = true;
-			},
-			sync() {
-				this.$nextTick(function () {
-					this.reset();
-				});
-			},
-			reset() {
-				var elems = this.$el.getElementsByClassName("syncscroll");
-				var el1 = elems[0];
-				var el2 = elems[1];
-				// clearing existing listeners
-				el1.removeEventListener('scroll', el1.syn, 0);
-				el2.removeEventListener('scroll', el2.syn, 0);
-				// setting-up the new listeners
-				el1.eX = el1.eY = el2.eX = el2.eY = 0;
-				this.syncScroll(el1, el2);
-				this.syncScroll(el2, el1);
-			},
-			resetui(event) {
-				var elems = this.$el.getElementsByClassName("syncscrollui");
-				var el1 = elems[0];
-				var el2 = elems[1];
-				// clearing existing listeners
-				el1.removeEventListener('scroll', el1.syn, 0);
-				el2.removeEventListener('scroll', el2.syn, 0);
-		        // setting-up the new listeners
-	            el1.eX = el1.eY = el2.eX = el2.eY = 0;
-				this.syncScroll(el1, el2);
-				this.syncScroll(el2, el1);
-		    },
-			syncScroll(el, otherEl) {
-				el.addEventListener('scroll', el.syn = function () {
-					var scrollX = el.scrollLeft;
-					var scrollY = el.scrollTop;
-					var xRate = scrollX / (el.scrollWidth - el.clientWidth);
-					var yRate = scrollY / (el.scrollHeight - el.clientHeight);
-					var updateX = scrollX != el.eX;
-					var updateY = scrollY != el.eY;
-					el.eX = scrollX;
-					el.eY = scrollY;
-					if (updateX && Math.round(otherEl.scrollLeft -
-						(scrollX = otherEl.eX = Math.round(xRate * (otherEl.scrollWidth - otherEl.clientWidth))))
-					) {otherEl.scrollLeft = scrollX;}
-					if (updateY && Math.round(otherEl.scrollTop -
-						(scrollY = otherEl.eY = Math.round(yRate * (otherEl.scrollHeight - otherEl.clientHeight))))
-					) {otherEl.scrollTop = scrollY;}
-				}, 0);
-			},
-			diffFlows() {
-				this.loading0 = true;
-				axios.post("/changednodes")
-				.then(response => {
-					var f = response.data;
-					if (f.added === undefined) {
-						console.log(f.msg);
-						this.retrieveResult0 = f.msg;
-						if (String(f.msg).startsWith("Branch")) {
-							this.merged[0] = true;
-						}
-					} else {
-						this.addedNodes = f.added;
-						for (var i = 0; i < this.addedNodes.length; i++) {
-							this.addedNodes[i].add = true;
-						}
-						this.changedNodes = f.changed;
-						for (var i = 0; i < this.changedNodes.length; i++) {
-							this.changedNodes[i].merged = false;
-						}
-						this.showMergeFlows = true;
-						this.retrieveResult0 = "";
-					}
-					this.loading0 = false;
-					this.initializing = false;
-				})
-				.catch(error => {
-					console.log(error.message);
-					this.retrieveResult0 = error.message;
-					this.loading0 = false;
-					this.initializing = false;
-				});
-			},
-			diffUI(type) {
-				event.preventDefault();
-				this.uiType = type;
-				this.loading2 = true;
-				axios.post("/changeduis/" + type)
-				.then(response => {
-				    var f = response.data;
-				    console.log(f);
-					if (!Array.isArray(f)) {
-						console.log(f.msg);
-						if (type === "html") {
-							this.retrieveResult2 = f.msg;
-						} else if (type === "js") {
-							this.retrieveResult3 = f.msg;
-						} else {
-							this.retrieveResult4 = f.msg;
-						}
-					} else {
-						if (f[0] === "") {
-							console.log(type + "'s are the same");
-							if (type === "html") {
-								this.retrieveResult2 = type + "'s are the same";
-								this.merged[1] = true;
-							} else if (type === "js") {
-								this.retrieveResult3 = type + "'s are the same";
-								this.merged[2] = true;
-							} else {
-								this.retrieveResult4 = type + "'s are the same";
-								this.merged[3] = true;
-							}
-						} else {
-							this.ui = f;
-							this.showMergeUi = true;
-						}
-					}
-					this.loading2 = false;
-				})
-				.catch(error => {
-					if (error.response.status === 400) {
-						this.retrieveResult2 = "Please push button again.";
-					} else {
-				    	console.log(error.message);
-						if (type === "html") {
-							this.retrieveResult2 = error.message;
-						} else if (type === "js") {
-							this.retrieveResult3 = error.message;
-						} else {
-							this.retrieveResult4 = error.message;
-						}
-					}
-					this.loading2 = false;
-				});
-			},
-			onMergeCode(index, row) {
-				this.showMergeCode = true;
-				this.showMergeFlows = false;
-				this.showMergeUi = false;
-				this.curix = index;
-				this.currow = row;
-			},
-			doneMergingCode() {
-				this.showMergeCode = false;
-				this.showMergeFlows = true;
-				this.showMergeUi = false;
-				this.changedNodes[this.curix].curHtml = this.currow.curHtml;
-				this.changedNodes[this.curix].nodeContent.func = this.currow.curHtml;
-				this.changedNodes[this.curix].merged = true;
-				this.$refs.cn.refresh(); // Refresh changedNodes table to show changes
-			},
-			doneMergingUi() {
-				this.merging = false;
-				this.showMergeUi = false;
-				this.showMergeFlows = false;
-				this.showMergeCode = false;
-				if (this.uiType === "html") {
-					this.html = this.ui[0];
-					this.merged[1] = true;
-				} else if (this.uiType === "js") {
-					this.js = this.ui[0];
-					this.merged[2] = true;
-				} else {
-					this.css = this.ui[0];
-					this.merged[3] = true;
-				}
-			},
-			getBranch() {
-				this.retrieveResult6 = "";
-				this.uptodate = false;
-				this.loading4 = true;
-				axios.post("/getbranch")
-				.then(response => {
-					var f = response.data;
-					if (f.branch === "") {
-						console.log(f.msg);
-						this.retrieveResult6 = f.msg;
-						this.errmsg = "danger";
-					} else if (f.msg !== "") {
-						console.log(f.msg);
-						this.retrieveResult6 = f.msg;
-						this.errmsg = "success";
-						this.uptodate = true;
-					}
-					this.branchName = f.branch;
-					this.loading4 = false;
-				})
-				.catch(error => {
-					console.log(error.message);
-					this.retrieveResult6 = error.message;
-					this.errmsg = "danger";
-					this.loading4 = false;
-				});
-			},
-			getMyBranches() {
-				this.retrieveResult7 = "";
-				this.loading7 = true;
-				this.myBranches = [];
-				axios.post("/getbranches")
-				.then(response => {
-					for (var i = 0; i < response.data.length; i++) {
-						if (response.data[i] === this.branchName) {
-							this.myBranches.push({text:response.data[i],disabled:true});
-						} else {
-							this.myBranches.push(response.data[i]);
-						}
-					}
-					this.selected = [];
-					this.loading7 = false;
-				})
-				.catch(error => {
-					console.log(error.message);
-					this.retrieveResult7 = error.message;
-					this.errmsg = "danger";
-					this.loading7 = false;
-				});
-			},
-			createBranch() {
-				this.loading5 = true;
-				this.retrieveResult5 = "";
-				var url = "/createbranch/" + this.newBranchName
-				if (this.branch === "remove") {
-					url += ":" + this.branchName;
-				}
-				axios.post(url)
-				.then(response => {
-					var f = response.data;
-					if (String(f).startsWith("svn")) {
-						console.log(f);
-						this.retrieveResult5 = f;
-					} else {
-						this.retrieveResult5 = "";
-						
-						this.branchName = this.newBranchName;
-					}
-					this.loading5 = false;
-					this.refresh();
-				})
-				.catch(error => {
-					console.log(error.message);
-					this.retrieveResult5 = error.message;
-					this.loading5 = false;
-				});
-			},
-			updateBranch() {
-				this.loading6 = true;
-				this.retrieveResult6 = "";
-				for (var n of this.addedNodes) {
-					if (n.add) {
-						this.mergedNodes.push({nodeId: n.nodeId, nodeContent: n.nodeContent });
-					}
-				}
-				for (var n of this.changedNodes) {
-					this.mergedNodes.push({ nodeId: n.nodeId, nodeContent: n.nodeContent });
-				}
-				axios.post("/updatebranch", {nodes: this.mergedNodes, html: this.html, js: this.js, css: this.css})
-				.then(response => {
-					var f = response.data;
-					if (String(f).startsWith("svn")) {
-						console.log(f);
-						this.retrieveResult6 = f;
-					}
-					this.loading6 = false;
-					this.refresh();
-				})
-				.catch(error => {
-					console.log(error.message);
-					this.retrieveResult6 = error.message;
-					this.loading6 = false;
-				});
-			},
-			refreshList() {
-				this.getMyBranches();
-				this.selected = [];
-			},
-			removeBranches() {
-				axios.post("/removebranch", this.selected)
-				.then(response => {
-					var f = response.data;
-					if (String(f).startsWith("svn")) {
-						console.log(f);
-						this.retrieveResult7 = f;
-					}
-					this.loading7 = false;
-					this.getMyBranches();
-				})
-				.catch(error => {
-					console.log(error.message);
-					this.retrieveResult7 = error.message;
-					this.loading7 = false;
-				});
-			},
-		},
-		mounted: function () {
-			this.checkCookies();
-			this.sync();
-			this.showMergeCode = false;
-			this.showMergeUi = false;
-			this.merged = [false, false, false, false];
-			this.getBranch();
-		}
-	})
-</script>
 
 </html>

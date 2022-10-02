@@ -26,6 +26,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -41,6 +42,11 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonValue;
 
 import org.tmatesoft.svn.core.SVNCommitInfo;
 import org.tmatesoft.svn.core.SVNDepth;
@@ -78,24 +84,17 @@ import org.tmatesoft.svn.core.wc2.SvnStatus;
 import org.tmatesoft.svn.core.wc2.SvnTarget;
 import org.tmatesoft.svn.core.wc2.SvnUpdate;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
-import nl.das.nrdevmgr.branchmgr.Utils;
-
 /**
- * This class manipulates the Subversion (SVN) functions needed for the AnyDB (NodeRED) managers 
+ * This class manipulates the Subversion (SVN) functions needed for the AnyDB (NodeRED) managers
  */
 /**
- * 
+ *
  */
 public class SvnActions {
 
 	/**
 	 * Property file with the following properties:
-	 * 
+	 *
 	 * host=          Name of the host where the manager runs on (e.g. localhost)
 	 * port=          Port number where the manager runs on (e.g.4545)
 	 * repohost=      SVN host URL (e.g. http://localhost)
@@ -115,7 +114,7 @@ public class SvnActions {
 
 	/**
 	 * Constructor
-	 * 
+	 *
 	 * @param properties
 	 * @throws SVNException
 	 */
@@ -131,14 +130,14 @@ public class SvnActions {
 		ISVNAuthenticationManager authManager = BasicAuthenticationManager.newInstance(this.user, this.pwd.toCharArray());
 		this.svnOperationFactory = new SvnOperationFactory();
 		this.svnOperationFactory.setAuthenticationManager(authManager);
-		
+
 	}
 
 	/**
 	 * Get the name of the branch that is checked out in the workdir
-	 * 
+	 *
 	 * @return name of the branch
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	public String getBranch() {
 		String branchName = "";
@@ -161,10 +160,10 @@ public class SvnActions {
 
 	/**
 	 * Get a list of all branches with author equal to the current user
-	 * 
+	 *
 	 * @return list of branch names
 	 * @throws SVNException
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	public List<String> getAllBranches() throws SVNException, IOException {
 		String flow = getTrunkFlow(-1);
@@ -191,7 +190,7 @@ public class SvnActions {
 
 	/**
 	 * Get a list of all branches with author equal to the current user
-	 * 
+	 *
 	 * @return list of branch names
 	 * @throws SVNException
 	 */
@@ -214,7 +213,7 @@ public class SvnActions {
 	}
 	/**
 	 * Create a new branch in the SVN repository from the trunk
-	 * 
+	 *
 	 * @param name Name of the branch
 	 * @throws SVNException
 	 * @throws IOException
@@ -282,7 +281,7 @@ public class SvnActions {
 
 	/**
 	 * Removes a branch from the SVN repository
-	 * 
+	 *
 	 * @param name name of branch to remove
 	 * @throws SVNException
 	 */
@@ -302,11 +301,11 @@ public class SvnActions {
 	 * <li>uibuilder/[uiPath]/src/index.js</li>
 	 * <li>uibuilder/[uiPath]/src/index.css</li>
 	 * </ul>
-	 * 
+	 *
 	 * @return true if dirty
 	 * @throws SVNException
 	 */
-	public int isTrunkDirty() throws SVNException {
+	public int isWCDirty() throws SVNException {
 		int changes = 0;
 		List<SvnStatus> sts = new ArrayList<>();
 		SvnGetStatus status = this.svnOperationFactory.createGetStatus();
@@ -346,10 +345,10 @@ public class SvnActions {
 		}
 		return changes;
 	}
-	
+
 	/**
 	 * Get the latest revision number of the trunk
-	 * 
+	 *
 	 * @return revision number
 	 * @throws SVNException
 	 */
@@ -360,7 +359,7 @@ public class SvnActions {
 		gi.run(infos);
 		return infos.get(infos.size() - 1).getLastChangedRevision();
 	}
-	
+
 	/**
 	 * From the trunk-repo get the latest revision number of the NodeRED files:
 	 * <ul>
@@ -369,7 +368,7 @@ public class SvnActions {
 	 * <li>uibuilder/[uiPath]/src/index.js</li>
 	 * <li>uibuilder/[uiPath]/src/index.css</li>
 	 * </ul>
-	 * 
+	 *
 	 * @return Array of 4 longs
 	 * @throws SVNException
 	 * @throws UnsupportedEncodingException
@@ -391,8 +390,8 @@ public class SvnActions {
 			rev[1] = infos.get(infos.size() - 1).getLastChangedRevision();
 		} catch (SVNException e) {
 //			System.out.println("getLatestTrunkRevisions: " + e.getMessage());
-			if (!(e.getMessage().contains("uibuilder/src/index") &&  
-					(e.getMessage().contains("non-existent") || 
+			if (!(e.getMessage().contains("uibuilder/src/index") &&
+					(e.getMessage().contains("non-existent") ||
 					 e.getMessage().contains("was not found.") ||
 					 e.getMessage().contains("path not found:")))) {
 				throw e;
@@ -405,8 +404,8 @@ public class SvnActions {
 			gi.run(infos);
 			rev[2] = infos.get(infos.size() - 1).getLastChangedRevision();
 		} catch (SVNException e) {
-			if (!(e.getMessage().contains("uibuilder/src/index") &&  
-					(e.getMessage().contains("non-existent") || 
+			if (!(e.getMessage().contains("uibuilder/src/index") &&
+					(e.getMessage().contains("non-existent") ||
 					 e.getMessage().contains("was not found.") ||
 					 e.getMessage().contains("path not found:")))) {
 				throw e;
@@ -419,8 +418,8 @@ public class SvnActions {
 			gi.run(infos);
 			rev[3] = infos.get(infos.size() - 1).getLastChangedRevision();
 		} catch (SVNException e) {
-			if (!(e.getMessage().contains("uibuilder/src/index") &&  
-					(e.getMessage().contains("non-existent") || 
+			if (!(e.getMessage().contains("uibuilder/src/index") &&
+					(e.getMessage().contains("non-existent") ||
 					 e.getMessage().contains("was not found.") ||
 					 e.getMessage().contains("path not found:")))) {
 				throw e;
@@ -437,64 +436,64 @@ public class SvnActions {
 	 * <li>/uibuilder/[uiPath]/src/index.js</li>
 	 * <li>/uibuilder/[uiPath]/src/index.css</li>
 	 * </ul>
-	 * 
+	 *
 	 * @return Array of 4 longs
 	 * @throws SVNException
 	 * @throws UnsupportedEncodingException
 	 */
-	public long[] getLatestBranchRevisions() throws SVNException, UnsupportedEncodingException {
+	public long[] getLatestBranchRevisions(String branchName) throws SVNException, UnsupportedEncodingException {
 		// flows.json, index.html, index.js, index.css
 		long[] rev = {0,0,0,0};
 		SvnGetInfo gi = this.svnOperationFactory.createGetInfo();
-		gi.addTarget(SvnTarget.fromFile(new File(this.workdir + "/flows.json")));
+		gi.addTarget(SvnTarget.fromURL(this.branchUrl.appendPath(branchName + "/flows.json", false) ));
 		SvnInfo info = gi.run();
 		rev[0] = info.getLastChangedRevision();
 		try {
 			gi = this.svnOperationFactory.createGetInfo();
-			gi.addTarget(SvnTarget.fromFile(new File(this.workdir + "/uibuilder/" + this.uiPath + "/src/index.html")));
+			gi.addTarget(SvnTarget.fromURL(this.branchUrl.appendPath(branchName + "/uibuilder/" + this.uiPath + "/src/index.html", false)));
 			info = gi.run();
 			rev[1] = info.getLastChangedRevision();
 		} catch (SVNException e) {
 //			System.out.println("getLatestBranchRevisions: " + e.getMessage());
-			if (!(e.getMessage().contains("uibuilder/src/index") &&  
-					(e.getMessage().contains("non-existent") || 
+			if (!(e.getMessage().contains("uibuilder") &&
+					(e.getMessage().contains("non-existent") ||
 					 e.getMessage().contains("was not found.") ||
 					 e.getMessage().contains("path not found:")))) {
 				throw e;
 			}
 		}
 		try {
-		gi = this.svnOperationFactory.createGetInfo();
-		gi.addTarget(SvnTarget.fromFile(new File(this.workdir + "/uibuilder/" + this.uiPath + "/src/index.js")));
-		info = gi.run();
-		rev[2] = info.getLastChangedRevision();
-		} catch (SVNException e) {
-			if (!(e.getMessage().contains("uibuilder/src/index") &&  
-					(e.getMessage().contains("non-existent") || 
-					 e.getMessage().contains("was not found.") ||
-					 e.getMessage().contains("path not found:")))) {
-				throw e;
+			gi = this.svnOperationFactory.createGetInfo();
+			gi.addTarget(SvnTarget.fromURL(this.branchUrl.appendPath(branchName + "/uibuilder/" + this.uiPath + "/src/index.js", false)));
+			info = gi.run();
+			rev[2] = info.getLastChangedRevision();
+			} catch (SVNException e) {
+				if (!(e.getMessage().contains("uibuilder/src/index") &&
+						(e.getMessage().contains("non-existent") ||
+						 e.getMessage().contains("was not found.") ||
+						 e.getMessage().contains("path not found:")))) {
+					throw e;
+				}
 			}
-		}
 		try {
-		gi = this.svnOperationFactory.createGetInfo();
-		gi.addTarget(SvnTarget.fromFile(new File(this.workdir + "/uibuilder/" + this.uiPath + "/src/index.css")));
-		info = gi.run();
-		rev[3] = info.getLastChangedRevision();
-		} catch (SVNException e) {
-			if (!(e.getMessage().contains("uibuilder/src/index") &&  
-					(e.getMessage().contains("non-existent") || 
-					 e.getMessage().contains("was not found.") ||
-					 e.getMessage().contains("path not found:")))) {
-				throw e;
-			}
+			gi = this.svnOperationFactory.createGetInfo();
+			gi.addTarget(SvnTarget.fromURL(this.branchUrl.appendPath(branchName + "/uibuilder/" + this.uiPath + "/src/index.css", false)));
+			info = gi.run();
+			rev[3] = info.getLastChangedRevision();
+			} catch (SVNException e) {
+				if (!(e.getMessage().contains("uibuilder/src/index") &&
+						(e.getMessage().contains("non-existent") ||
+						 e.getMessage().contains("was not found.") ||
+						 e.getMessage().contains("path not found:")))) {
+					throw e;
+				}
 		}
 		return rev;
 	}
 
 	/**
 	 * Get the latest revision number of trunk that is merged into the branch
-	 * 
+	 *
 	 * @param fromWC from Working Copy (true) or Repository (false)?
 	 * @return the revision number as long.
 	 * @throws SVNException
@@ -505,7 +504,7 @@ public class SvnActions {
 		if(fromWC) {
 			gmi.setSingleTarget(SvnTarget.fromFile(new File(this.workdir)));
 		} else {
-			gmi.setSingleTarget(SvnTarget.fromURL(this.branchUrl.appendPath(branchName, false)));
+			gmi.setSingleTarget(SvnTarget.fromURL(this.branchUrl.appendPath(branchName, true)));
 		}
 		Map<SVNURL,SVNMergeRangeList> map = gmi.run();
 		if (map != null) {
@@ -522,12 +521,12 @@ public class SvnActions {
 		}
 		return rev;
 	}
-	
+
 	/**
 	 * @param env "trunk" or branchName
 	 * @param type 'f' (flows.json), 'h' (index.html), 'j' (index.js), 'c' (index.css)
 	 * @return
-	 * @throws SVNException 
+	 * @throws SVNException
 	 */
 	public List<Long> getAllRevisionNumbers(String env, char type) throws SVNException {
 		List<Long> revs = new ArrayList<>();
@@ -580,8 +579,8 @@ public class SvnActions {
 			}
 		} catch (SVNException e) {
 //			System.out.println("getAllRevisionNumbers: " + e.getMessage());
-			if (!(e.getMessage().contains("uibuilder/src/index") &&  
-					(e.getMessage().contains("non-existent") || 
+			if (!(e.getMessage().contains("uibuilder") &&
+					(e.getMessage().contains("non-existent") ||
 					 e.getMessage().contains("was not found.") ||
 					 e.getMessage().contains("path not found:")))) {
 				throw e;
@@ -620,8 +619,8 @@ public class SvnActions {
 			}
 		} catch (SVNException e) {
 	//		System.out.println("getAllRevisionNumbers: " + e.getMessage());
-			if (!(e.getMessage().contains("mysql/scripts/") &&  
-					(e.getMessage().contains("non-existent") || 
+			if (!(e.getMessage().contains("scripts/") &&
+					(e.getMessage().contains("non-existent") ||
 					 e.getMessage().contains("was not found.") ||
 					 e.getMessage().contains("path not found:")))) {
 				throw e;
@@ -629,37 +628,50 @@ public class SvnActions {
 		}
 		return revs;
 	}
-	
+
 	/**
 	 * Get the content of the flows.json file in the trunk
-	 * 
+	 *
 	 * @param revision Revision number of the flows.json file
 	 * @return the content of the flows.json file
 	 * @throws SVNException
 	 * @throws IOException
 	 */
 	public String getTrunkFlow(long revision) throws SVNException, IOException {
-		File tmpdir = Files.createTempDirectory("anydb-").toFile();
-		SvnExport export = this.svnOperationFactory.createExport();
-		export.setSingleTarget(SvnTarget.fromFile(tmpdir));
-		export.setForce(true);
-		try {
-			export.setSource(SvnTarget.fromURL(this.trunkUrl.appendPath("flows.json", false), SVNRevision.create(revision)));
-			export.run();
-		} catch (SVNException e) {
-			if (!e.getMessage().startsWith("svn: E170000:")) {
-				throw e;
+		String content = "";
+		if (revision == 0) {
+			// Get Workdir file
+			content = new String(Files.readAllBytes(Paths.get(this.workdir + "/flows.json")));
+		} else {
+			File tmpdir = Files.createTempDirectory("anydb-").toFile();
+			SvnExport export = this.svnOperationFactory.createExport();
+			export.setSingleTarget(SvnTarget.fromFile(tmpdir));
+			export.setForce(true);
+			if (revision == -1) {
+				// Get HEAD revision of flows.json in repo
+				export.setSource(SvnTarget.fromURL(this.trunkUrl.appendPath("flows.json", false), SVNRevision.HEAD));
+				export.run();
+			} else {
+				// Get given revision of flows.json in repo
+				try {
+					export.setSource(SvnTarget.fromURL(this.trunkUrl.appendPath("flows.json", false), SVNRevision.create(revision)));
+					export.run();
+				} catch (SVNException e) {
+					if (!e.getMessage().startsWith("svn: E170000:")) {
+						throw e;
+					}
+					export.setSource(SvnTarget.fromURL(this.trunkUrl.appendPath("flows.json", false), SVNRevision.create(-1)));
+					export.run();
+				}
 			}
-			export.setSource(SvnTarget.fromURL(this.trunkUrl.appendPath("flows.json", false), SVNRevision.create(-1)));
-			export.run();
+			content = new String(Files.readAllBytes(Paths.get(tmpdir.getAbsolutePath() + "/flows.json")));
 		}
-		String content = new String(Files.readAllBytes(Paths.get(tmpdir.getAbsolutePath() + "/flows.json")));
 		return content;
 	}
 
 	/**
 	 * Get the content of the UI file determined by the type
-	 * 
+	 *
 	 * @param revision Revision number of the index.[type] file
 	 * @param type 'html', 'js' or 'css'
 	 * @return the content of the index-file
@@ -667,27 +679,39 @@ public class SvnActions {
 	 * @throws IOException
 	 */
 	public String getTrunkUi(String type, long revision) throws SVNException, IOException {
-		File tmpdir = Files.createTempDirectory("anydb-").toFile();
-		SvnExport export = this.svnOperationFactory.createExport();
-		export.setSingleTarget(SvnTarget.fromFile(tmpdir));
-		export.setForce(true);
+		String content = "";
 		try {
-			export.setSource(SvnTarget.fromURL(this.trunkUrl.appendPath("uibuilder/" + this.uiPath + "/src/index." + type, false), SVNRevision.create(revision)));
-			export.run();
+			if (revision == 0) {
+				// Get Workdir file
+				content = new String(Files.readAllBytes(Paths.get(this.workdir + "/uibuilder/" + this.uiPath + "/src/index." + type)));
+			} else {
+				File tmpdir = Files.createTempDirectory("anydb-").toFile();
+				SvnExport export = this.svnOperationFactory.createExport();
+				export.setSingleTarget(SvnTarget.fromFile(tmpdir));
+				export.setForce(true);
+				if (revision == -1) {
+					export.setSource(SvnTarget.fromURL(this.trunkUrl.appendPath("uibuilder/" + this.uiPath + "/src/index." + type, false), SVNRevision.HEAD));
+				} else {
+					export.setSource(SvnTarget.fromURL(this.trunkUrl.appendPath("uibuilder/" + this.uiPath + "/src/index." + type, false), SVNRevision.create(revision)));
+				}
+				export.run();
+				content = new String(Files.readAllBytes(Paths.get(tmpdir.getAbsolutePath() + "/index." + type)));
+			}
 		} catch (SVNException e) {
-			if (!e.getMessage().startsWith("svn: E170000:")) {
+			if (!(e.getMessage().contains("uibuilder") &&
+					(e.getMessage().contains("non-existent") ||
+					 e.getMessage().contains("doesn't exist") ||
+					 e.getMessage().contains("was not found.") ||
+					 e.getMessage().contains("path not found:")))) {
 				throw e;
 			}
-			export.setSource(SvnTarget.fromURL(this.branchUrl.appendPath("uibuilder/" + this.uiPath + "/src/index." + type, false), SVNRevision.create(-1)));
-			export.run();
 		}
-		String content = new String(Files.readAllBytes(Paths.get(tmpdir.getAbsolutePath() + "/index." + type)));
 		return content;
 	}
 
 	/**
 	 * Get the content of the SQL file determined by the type
-	 * 
+	 *
 	 * @param revision Revision number of the SQL [type] file
 	 * @param type 'procedures', 'tables' or 'views'
 	 * @return the content of the SQL-file
@@ -715,20 +739,20 @@ public class SvnActions {
 
 	/**
 	 * Get the flow.json content of the branch in the work folder.
-	 * 
+	 *
 	 * @param branch name of the branch
 	 * @param revno revision number
 	 * @param fromWC from Working Copy (true) or Repository (false)?
 	 * @return the content of the flows.json file
-	 * @throws IOException 
-	 * @throws SVNException 
+	 * @throws IOException
+	 * @throws SVNException
 	 */
 	public String getBranchFlow(String branch, long revno, boolean fromWC) throws IOException, SVNException {
 		String content = "";
 		if (fromWC) {
 			content = new String(Files.readAllBytes(Paths.get(this.workdir + "/flows.json")));
 		} else {
-			File tmpdir = Files.createTempDirectory("anydb-").toFile();
+			File tmpdir = Files.createTempDirectory("nodered-").toFile();
 			SvnExport export = this.svnOperationFactory.createExport();
 			export.setSingleTarget(SvnTarget.fromFile(tmpdir));
 			export.setForce(true);
@@ -744,15 +768,16 @@ public class SvnActions {
 			}
 			content = new String(Files.readAllBytes(Paths.get(tmpdir.getAbsolutePath() + "/flows.json")));
 		}
+
 		return content;
 	}
 
 	/**
 	 * Get the content of the index.[type] file of the branch in the work folder.
-	 * 
+	 *
 	 * @param type "html", "js" or "css"
 	 * @return the content of the file
-	 * @throws SVNException 
+	 * @throws SVNException
 	 */
 	public String getBranchUi(String type, String branch, long revno, boolean fromWC) throws SVNException {
 		String content = "";
@@ -760,31 +785,33 @@ public class SvnActions {
 			if (fromWC) {
 				content = new String(Files.readAllBytes(Paths.get(this.workdir + "/uibuilder/" + this.uiPath + "/src/index." + type)));
 			} else {
-				File tmpdir = Files.createTempDirectory("anydb-").toFile();
-				SvnExport export = this.svnOperationFactory.createExport();
-				export.setSingleTarget(SvnTarget.fromFile(tmpdir));
-				export.setForce(true);
 				try {
+					File tmpdir = Files.createTempDirectory("nodered-").toFile();
+					SvnExport export = this.svnOperationFactory.createExport();
+					export.setSingleTarget(SvnTarget.fromFile(tmpdir));
+					export.setForce(true);
 					export.setSource(SvnTarget.fromURL(this.branchUrl.appendPath(branch + "/uibuilder/" + this.uiPath + "/src/index." + type, false), SVNRevision.create(revno)));
 					export.run();
+					content = new String(Files.readAllBytes(Paths.get(tmpdir.getAbsolutePath() + "/index." + type)));
 				} catch (SVNException e) {
-					if (!e.getMessage().startsWith("svn: E170000:")) {
+					if (!(e.getMessage().contains("uibuilder") &&
+							(e.getMessage().contains("non-existent") ||
+							 e.getMessage().contains("doesn't exist") ||
+							 e.getMessage().contains("was not found.") ||
+							 e.getMessage().contains("path not found:")))) {
 						throw e;
 					}
-					export.setSource(SvnTarget.fromURL(this.branchUrl.appendPath(branch + "/uibuilder/" + this.uiPath + "/src/index." + type, false), SVNRevision.create(-1)));
-					export.run();
 				}
-				content = new String(Files.readAllBytes(Paths.get(tmpdir.getAbsolutePath() + "/index." + type)));
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return content;
 	}
-	
+
 	/**
 	 * Write new content to the flows.json file in the work folder
-	 * 
+	 *
 	 * @param flow the new content
 	 * @throws IOException
 	 */
@@ -793,10 +820,10 @@ public class SvnActions {
         writer.write(flow);
         writer.close();
 	}
-	
+
 	/**
 	 * Write new content to the index.[type]  file in the work folder.
-	 * 
+	 *
 	 * @param type "html", "js" or "css"
 	 * @param content the new content
 	 * @throws IOException
@@ -809,16 +836,16 @@ public class SvnActions {
 
 	/**
 	 * Register the merge in the work folder
-	 * 
+	 *
 	 * @throws SVNException
 	 */
-	public void merge(boolean trunkInBranch) throws SVNException {
+	public void merge(boolean trunkInBranch, String branch) throws SVNException {
 		SvnMerge merge = this.svnOperationFactory.createMerge();
 		merge.addTarget(SvnTarget.fromFile(new File(this.workdir)));
 		if (trunkInBranch) {
 			merge.setSource(SvnTarget.fromURL(this.trunkUrl), true);
 		} else {
-			merge.setSource(SvnTarget.fromURL(this.branchUrl), true);
+			merge.setSource(SvnTarget.fromURL(this.branchUrl.appendPath(branch, true)), true);
 		}
 		merge.setRecordOnly(true);
 		merge.setAllowMixedRevisions(true);
@@ -827,20 +854,22 @@ public class SvnActions {
 		resolve.setConflictChoice(SVNConflictChoice.MINE_FULL);
 		resolve.addTarget(SvnTarget.fromFile(new File(this.workdir + "/flows.json")));
 		resolve.run();
-		resolve = this.svnOperationFactory.createResolve();
-		resolve.addTarget(SvnTarget.fromFile(new File(this.workdir + "/uibuilder/" + this.uiPath + "/src/index.html")));
-		resolve.run();
-		resolve = this.svnOperationFactory.createResolve();
-		resolve.addTarget(SvnTarget.fromFile(new File(this.workdir + "/uibuilder/" + this.uiPath + "/src/index.js")));
-		resolve.run();
-		resolve = this.svnOperationFactory.createResolve();
-		resolve.addTarget(SvnTarget.fromFile(new File(this.workdir + "/uibuilder/" + this.uiPath + "/src/index.css")));
-		resolve.run();
+		if (Files.exists(Paths.get(this.workdir + "/uibuilder/" + this.uiPath + "/src/index.html"))) {
+			resolve = this.svnOperationFactory.createResolve();
+			resolve.addTarget(SvnTarget.fromFile(new File(this.workdir + "/uibuilder/" + this.uiPath + "/src/index.html")));
+			resolve.run();
+			resolve = this.svnOperationFactory.createResolve();
+			resolve.addTarget(SvnTarget.fromFile(new File(this.workdir + "/uibuilder/" + this.uiPath + "/src/index.js")));
+			resolve.run();
+			resolve = this.svnOperationFactory.createResolve();
+			resolve.addTarget(SvnTarget.fromFile(new File(this.workdir + "/uibuilder/" + this.uiPath + "/src/index.css")));
+			resolve.run();
+		}
 	}
 
 	/**
 	 * Commit the work folder
-	 * 
+	 *
 	 * @param commitMessage
 	 * @return the new revision number
 	 * @throws SVNException
@@ -864,7 +893,7 @@ public class SvnActions {
 
 	/**
 	 * Show a log-entry on the console
-	 * 
+	 *
 	 * @param logEntry
 	 */
 	public void dumpLogEntry(SVNLogEntry logEntry) {
@@ -893,28 +922,28 @@ public class SvnActions {
 
 	/**
 	 * Determine the URL path of the UI
-	 * 
+	 *
 	 * @param flow
 	 * @return
 	 */
 	private String getUiUrl(String flow) {
 		String url = "";
-		JsonArray jsonArray = new JsonParser().parse(flow).getAsJsonArray();
-		for (JsonElement jo : jsonArray) {
+		JsonArray jsonArray = Json.createReader(new StringReader(flow)).readArray();
+		for (JsonValue jo : jsonArray) {
 			if (jo.getClass() == JsonObject.class) {
 				JsonObject obj = (JsonObject) jo;
-				String type = obj.get("type").getAsString();
+				String type = obj.getString("type");
 				if (type.equalsIgnoreCase("uibuilder")) {
-					url = obj.get("url").getAsString();
+					url = obj.getString("url");
 				}
 			}
 		}
 		return url;
 	}
-	
+
 	/**
 	 * Determine the first trunk revision in the current branch
-	 * 
+	 *
 	 * @return
 	 * @throws SVNException
 	 */
@@ -933,7 +962,7 @@ public class SvnActions {
 		log.run(les);
 		return les.get(les.size() - 1).getRevision();
 	}
-	
+
 	/**
 	 * Gobble the inputstream through the given consumer.
 	 */

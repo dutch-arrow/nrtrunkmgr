@@ -28,7 +28,6 @@ import java.util.Properties;
 import org.tmatesoft.svn.core.SVNException;
 
 import fi.iki.elonen.NanoHTTPD;
-import nl.das.nrdevmgr.anydbmgr.Webserver;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ParameterException;
@@ -69,7 +68,7 @@ public class TrunkManager {
 		try {
 			Properties props = new Properties();
 			props.load(new FileInputStream(propFilePath));
-			Webserver srv = new Webserver(props);
+			Webserver srv = new Webserver(props, "trunk");
 			srv.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
 		} catch (IOException e) {
 			e.printStackTrace();

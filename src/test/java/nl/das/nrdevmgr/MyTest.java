@@ -49,7 +49,7 @@ public class MyTest {
 			    }
 			}
 		);
-		System.out.println("last live merge rev=" + rev[0]);
+		System.out.println("last trunk merge rev=" + rev[0]);
 
 		rev[0] = -1;
 		String path = props.getProperty("live.repourl");
@@ -67,6 +67,6 @@ public class MyTest {
 			    }
 			}
 		);
-		System.out.println("latest live rev=" + rev[0]);
+		System.out.println("latest trunk rev=" + rev[0]);
 	}
 }

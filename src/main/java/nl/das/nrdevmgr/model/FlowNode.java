@@ -1,4 +1,7 @@
-package nl.das.nrdevmgr;
+package nl.das.nrdevmgr.model;
+
+import javax.json.JsonObject;
+
 /**
  *******************************************************************************************
  **
@@ -17,8 +20,6 @@ package nl.das.nrdevmgr;
  **
  *******************************************************************************************
  */
-
-import com.google.gson.JsonObject;
 
 /**
  * @author tom
