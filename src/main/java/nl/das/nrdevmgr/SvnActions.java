@@ -523,6 +523,8 @@ public class SvnActions {
 	}
 
 	/**
+	 * Get all revision numbers of a given nodered file
+	 *
 	 * @param env "trunk" or branchName
 	 * @param type 'f' (flows.json), 'h' (index.html), 'j' (index.js), 'c' (index.css)
 	 * @return
@@ -590,6 +592,8 @@ public class SvnActions {
 	}
 
 	/**
+	 * Get the all revisions of a given SQL script
+	 *
 	 * @param type 'p' (procedures.sql'), 'v' (views.sql) or 't' (table.sql)
 	 * @return
 	 * @throws SVNException

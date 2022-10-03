@@ -691,7 +691,7 @@ public class Webserver extends RouterNanoHTTPD {
 				svn.commit("PreMerge");
 				// Register branch as been merged with latest trunk
 				svn.merge(true, null);
-				// and commit the changes
+				// and commit the registration
 				long newRevNr = svn.commit("Merged");
 				System.out.println("Merged");
 				return newFixedLengthResponse("Committed in revision " + newRevNr);
