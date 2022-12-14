@@ -17,7 +17,7 @@
  *******************************************************************************************
  */
 
-package nl.das.nrdevmgr.model;
+package nl.das.nrtrunkmgr.model;
 
 import java.io.StringReader;
 import java.util.ArrayList;

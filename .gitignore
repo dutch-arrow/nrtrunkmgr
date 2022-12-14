@@ -1,3 +1,11 @@
 /temp.json
 /target/
 /.settings/
+/src/main/resources/static/css/
+/src/main/resources/static/favicon.ico
+/src/main/resources/static/index.html
+/src/main/resources/static/js/
+/src/main/resources/trunkpage.css
+/src/main/resources/trunkpage.html
+/src/main/resources/trunkpage.js
+/src/main/vue/node_modules/

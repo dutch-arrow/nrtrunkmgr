@@ -28,14 +28,14 @@
 		<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 		
 		<style><include>/trunkpage.css</include></style>
-	    <title>Nodered Trunk Review and Management</title>
+	    <title>Nodered Branch Review and Trunk Management</title>
     </head>
     <body>
     <!-- Our application root element -->
     <div id="app">
         <b-navbar type="dark" variant="primary">
 			<b-button id="collapse_button" variant="primary" @click="collapse_column" v-b-tooltip.hover.right :title="collapse_col_tooltip">{{collapse_col_text}}</b-button>
-            <div class="navbar-menu-title">Nodered Review and Maintenance</div>
+            <div class="navbar-menu-title">Nodered Branch Review and Trunk Maintenance</div>
         </b-navbar>
         <!-- SVN Login dialog -->
 		<b-modal id="login" ref="login" title="Enter your SVN credentials" @ok="handleLoginOk" hide-header-close>

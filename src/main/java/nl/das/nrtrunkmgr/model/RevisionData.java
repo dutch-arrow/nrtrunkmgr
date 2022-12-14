@@ -17,7 +17,7 @@
  *******************************************************************************************
  */
 
-package nl.das.nrdevmgr.model;
+package nl.das.nrtrunkmgr.model;
 
 import java.util.List;
 
@@ -30,10 +30,10 @@ public class RevisionData {
 	private List<Long> trunkUiHtml;
 	private List<Long> trunkUiJs;
 	private List<Long> trunkUiCss;
-	private List<Long> branchtrunkFlows;
-	private List<Long> branchtrunkUiHtml;
-	private List<Long> branchtrunkUiJs;
-	private List<Long> branchtrunkUiCss;
+	private List<Long> branchFlows;
+	private List<Long> branchUiHtml;
+	private List<Long> branchUiJs;
+	private List<Long> branchUiCss;
 	private List<Long> tableSql;
 	private List<Long> viewSql;
 	private List<Long> procSql;
@@ -63,29 +63,29 @@ public class RevisionData {
 	public void setTrunkUiCss(List<Long> trunkUiCss) {
 		this.trunkUiCss = trunkUiCss;
 	}
-	public List<Long> getBranchtrunkFlows() {
-		return this.branchtrunkFlows;
+	public List<Long> getBranchFlows() {
+		return this.branchFlows;
 	}
-	public void setBranchtrunkFlows(List<Long> branchtrunkFlows) {
-		this.branchtrunkFlows = branchtrunkFlows;
+	public void setBranchFlows(List<Long> branchFlows) {
+		this.branchFlows = branchFlows;
 	}
-	public List<Long> getBranchtrunkUiHtml() {
-		return this.branchtrunkUiHtml;
+	public List<Long> getBranchUiHtml() {
+		return this.branchUiHtml;
 	}
-	public void setBranchtrunkUiHtml(List<Long> branchtrunkUiHtml) {
-		this.branchtrunkUiHtml = branchtrunkUiHtml;
+	public void setBranchUiHtml(List<Long> branchUiHtml) {
+		this.branchUiHtml = branchUiHtml;
 	}
-	public List<Long> getBranchtrunkUiJs() {
-		return this.branchtrunkUiJs;
+	public List<Long> getBranchUiJs() {
+		return this.branchUiJs;
 	}
-	public void setBranchtrunkUiJs(List<Long> branchtrunkUiJs) {
-		this.branchtrunkUiJs = branchtrunkUiJs;
+	public void setBranchUiJs(List<Long> branchUiJs) {
+		this.branchUiJs = branchUiJs;
 	}
-	public List<Long> getBranchtrunkUiCss() {
-		return this.branchtrunkUiCss;
+	public List<Long> getBranchUiCss() {
+		return this.branchUiCss;
 	}
-	public void setBranchtrunkUiCss(List<Long> branchtrunkUiCss) {
-		this.branchtrunkUiCss = branchtrunkUiCss;
+	public void setBranchUiCss(List<Long> branchUiCss) {
+		this.branchUiCss = branchUiCss;
 	}
 	public List<Long> getTableSql() {
 		return this.tableSql;

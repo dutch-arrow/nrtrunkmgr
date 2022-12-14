@@ -1,7 +1,7 @@
 /**
  *******************************************************************************************
  **
- **  @filename       FlowsMerger.java
+ **  @filename       CompareFlows.java
  **  @brief
  **
  **  @copyright      (c) Core|Vision B.V.,
@@ -17,8 +17,7 @@
  *******************************************************************************************
  */
 
-
-package nl.das.nrdevmgr;
+package nl.das.nrtrunkmgr;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -26,9 +25,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
 
-import org.tmatesoft.svn.core.SVNException;
-
-import fi.iki.elonen.NanoHTTPD;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ParameterException;
@@ -37,18 +33,19 @@ import picocli.CommandLine.ParseResult;
 
 /**
  * See https://svnkit.com/javadoc/index.html?overview-summary.html See
- * https://wiki.svnkit.com/Managing_A_Working_Copy See
+ * See https://wiki.svnkit.com/Managing_A_Working_Copy
  *
- * Merges slave flows.json into master flows.json resulting in the merged flows.json
+ * @author tom
  *
  */
-@Command(name = "BranchManager", version = "(c) 2022, Dutch Arrow Software")
-public class BranchManager {
-	@Parameters(paramLabel = "<properties filepath>", defaultValue = "branchmgr.properties", description = "Path of the properties file")
+@Command(name = "TrunkManager", version = "(c) 2022, Dutch Arrow Software")
+public class TrunkManager {
+
+	@Parameters(paramLabel = "<properties filepath>", defaultValue = "trunkmgr.properties", description = "Path of the properties file")
 	static String propFilePath;
 
 	public static void main(String[] args) throws IOException {
-		BranchManager app = new BranchManager();
+		TrunkManager app = new TrunkManager();
 	     try {
 	         ParseResult parseResult = new CommandLine(app).parseArgs(args);
 	         if (!CommandLine.printHelpIfRequested(parseResult)) {
@@ -64,15 +61,13 @@ public class BranchManager {
 	     }
 	}
 
-	public void runProgram() throws IOException {
+	public void runProgram() {
 		try {
 			Properties props = new Properties();
 			props.load(new FileInputStream(propFilePath));
-			Webserver srv = new Webserver(props,"branch");
-			srv.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
+			Webserver srv = Webserver.getInstance(props);
+			srv.start();
 		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (SVNException e) {
 			e.printStackTrace();
 		}
 	}

@@ -18,10 +18,14 @@
  */
 
 
-package nl.das.nrdevmgr;
+package nl.das.nrtrunkmgr;
 
 import java.nio.ByteBuffer;
 import java.util.UUID;
+
+import javax.json.bind.Jsonb;
+import javax.json.bind.JsonbBuilder;
+import javax.json.bind.JsonbConfig;
 
 /**
  *
@@ -55,4 +59,9 @@ public class Utils {
         }
         return new String(hexChars);
     }
+
+	public static Jsonb parser() {
+		Jsonb jsonb = JsonbBuilder.create(new JsonbConfig().withFormatting(true));
+		return jsonb;
+	}
 }

@@ -18,7 +18,7 @@
  */
 
 
-package nl.das.nrdevmgr;
+package nl.das.nrtrunkmgr;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -51,26 +51,27 @@ import com.github.difflib.text.DiffRow;
 import com.github.difflib.text.DiffRowGenerator;
 
 import fi.iki.elonen.router.RouterNanoHTTPD;
-import nl.das.nrdevmgr.model.FlowNode;
-import nl.das.nrdevmgr.model.Node;
-import nl.das.nrdevmgr.model.RevisionData;
+import nl.das.nrtrunkmgr.model.FlowNode;
+import nl.das.nrtrunkmgr.model.Node;
+import nl.das.nrtrunkmgr.model.RevisionData;
+import nl.das.svnactions.SvnActions_old;
 
 /**
  * @author tom
  *
  */
-public class Webserver extends RouterNanoHTTPD {
+public class Webserver_old extends RouterNanoHTTPD {
 
 	private static Properties props;
 	private static boolean trunk;
-	private static SvnActions svn;
+	private static SvnActions_old svn;
 	private static String branchName;
 	private static boolean uptodate = false;
 	private static boolean merge;
 	private static long[] brevs;
 	private static List<Node> mergedNodes = new ArrayList<>();
 
-	public Webserver(Properties properties, String tbtype) throws IOException, SVNException {
+	public Webserver_old(Properties properties, String tbtype) throws IOException, SVNException {
         super(properties.getProperty("host"), Integer.parseInt(properties.getProperty("port")));
         props = properties;
         trunk = tbtype.equalsIgnoreCase("trunk");
@@ -186,7 +187,7 @@ public class Webserver extends RouterNanoHTTPD {
 					props.setProperty("username",cookies.read("SvnUser"));
 					props.setProperty("password",cookies.read("SvnPwd"));
 				}
-				svn = new SvnActions(props);
+				svn = new SvnActions_old(props);
 				List<String> branches = svn.getAllBranches();
 		        int isDirty = svn.isWCDirty();
 				String bjson = parser().toJson(branches);
@@ -219,10 +220,10 @@ public class Webserver extends RouterNanoHTTPD {
 				rd.setTrunkUiHtml(svn.getAllRevisionNumbers("trunk", 'h'));
 				rd.setTrunkUiJs(svn.getAllRevisionNumbers("trunk", 'j'));
 				rd.setTrunkUiCss(svn.getAllRevisionNumbers("trunk", 'c'));
-				rd.setBranchtrunkFlows(Arrays.asList(svn.getLatestBranchRevisions(branchName)[0], revs[0]));
-				rd.setBranchtrunkUiHtml(Arrays.asList(svn.getLatestBranchRevisions(branchName)[1], revs[1]));
-				rd.setBranchtrunkUiJs(Arrays.asList(svn.getLatestBranchRevisions(branchName)[2], revs[2]));
-				rd.setBranchtrunkUiCss(Arrays.asList(svn.getLatestBranchRevisions(branchName)[3], revs[3]));
+				rd.setBranchFlows(Arrays.asList(svn.getLatestBranchRevisions(branchName)[0], revs[0]));
+				rd.setBranchUiHtml(Arrays.asList(svn.getLatestBranchRevisions(branchName)[1], revs[1]));
+				rd.setBranchUiJs(Arrays.asList(svn.getLatestBranchRevisions(branchName)[2], revs[2]));
+				rd.setBranchUiCss(Arrays.asList(svn.getLatestBranchRevisions(branchName)[3], revs[3]));
 				String json = parser().toJson(rd);
 	            return newFixedLengthResponse(json);
 			} catch (SVNException | UnsupportedEncodingException e) {
@@ -482,6 +483,7 @@ public class Webserver extends RouterNanoHTTPD {
 	            // Then commit the "live" repo
         		String json = svn.commit(msg) + "";
 	            System.out.println("committed");
+
         		return newFixedLengthResponse(json);
 			} catch (SVNException | IOException | ResponseException  e) {
 				return newFixedLengthResponse(e.getMessage());
@@ -502,7 +504,7 @@ public class Webserver extends RouterNanoHTTPD {
 					props.setProperty("username",cookies.read("SvnUser"));
 					props.setProperty("password",cookies.read("SvnPwd"));
 				}
-				svn = new SvnActions(props);
+				svn = new SvnActions_old(props);
 				branchName = svn.getBranch();
 				if (branchName == "") {
 					return newFixedLengthResponse("{\"branch\":\"\",\"msg\":\"No branch found in ~/.node-red\"}");

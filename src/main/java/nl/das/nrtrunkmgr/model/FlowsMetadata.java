@@ -18,17 +18,16 @@
  */
 
 
-package nl.das.nrdevmgr.model;
+package nl.das.nrtrunkmgr.model;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
-
-import jakarta.json.Json;
 
 /**
  *
@@ -70,7 +69,7 @@ public class FlowsMetadata {
 	}
 
 	public static JsonObject merge(JsonObject master, JsonObject slave) {
-		JsonObjectBuilder merged = (JsonObjectBuilder) Json.createObjectBuilder();
+		JsonObjectBuilder merged = Json.createObjectBuilder();
 		String type = master.get("type").toString();
 		System.out.println("Node type=" + type);
 		List<String> meta = metaToMerge.get(type);

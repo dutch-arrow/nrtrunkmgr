@@ -1,4 +1,4 @@
-package nl.das.nrdevmgr.model;
+package nl.das.nrtrunkmgr.model;
 
 import javax.json.JsonObject;
 

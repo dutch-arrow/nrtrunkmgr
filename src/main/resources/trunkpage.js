@@ -240,6 +240,7 @@ window.app = new Vue({
 					    if (f.trunkUiHtml !== 0) {
 					    	this.noUI = true;
 					    }
+					    console.log(f);
 					    this.revhuiOptions = f.trunkUiHtml;
 					    this.revjuiOptions = f.trunkUiJs;
 					    this.revcuiOptions = f.trunkUiCss;

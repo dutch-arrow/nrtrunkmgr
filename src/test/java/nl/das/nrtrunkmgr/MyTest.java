@@ -1,4 +1,4 @@
-package nl.das.nrdevmgr;
+package nl.das.nrtrunkmgr;
 
 import java.io.FileInputStream;
 import java.io.IOException;
